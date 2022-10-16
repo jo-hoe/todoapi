@@ -35,8 +35,9 @@ func IntegrationTest_CRUD(t *testing.T, client todoclient.ToDoClient) {
 
 	// test create
 	task, err := client.CreateTask(parents[0].ID, todoclient.ToDoTask{
-		Name:    "test",
-		DueDate: time.Now(),
+		Name:        "test",
+		DueDate:     time.Now(),
+		Description: "test test test",
 	})
 	if err != nil {
 		t.Errorf("issue creating task '%v'", err)

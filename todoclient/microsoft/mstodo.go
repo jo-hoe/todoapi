@@ -30,9 +30,15 @@ type MSToDo struct {
 type msTask struct {
 	ID           string    `json:"id"`
 	DisplayName  string    `json:"displayName"`
+	BodyItem     bodyItem  `json:"bodyItem"`
 	DueDate      time.Time `json:"dueDateTime"`
 	CreationDate time.Time `json:"createdDateTime"`
 	ListID       string
+}
+
+type bodyItem struct {
+	Content     string `json:"content"`
+	ContentType string `json:"contentType" example:"text"`
 }
 
 type msOdataLists struct {
@@ -55,6 +61,7 @@ type msOdataTask struct {
 	DueDateTime      *msOdataDateTime `json:"dueDateTime,omitempty"`
 	ID               string           `json:"id,omitempty"`
 	Title            string           `json:"title,omitempty"`
+	Body             *bodyItem        `json:"body,omitempty"`
 	CreationDateTime *time.Time       `json:"createdDateTime,omitempty"`
 }
 
@@ -102,6 +109,7 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 		result = append(result, todoclient.ToDoTask{
 			ID:           task.ID,
 			Name:         task.DisplayName,
+			Description:  task.BodyItem.Content,
 			DueDate:      task.DueDate,
 			CreationTime: task.CreationDate,
 		})
@@ -113,12 +121,19 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 func concertToMSToDoTask(input todoclient.ToDoTask) msOdataTask {
 	// create result
 	result := msOdataTask{
-		Title:       input.Name,
-		DueDateTime: &msOdataDateTime{},
+		Title: input.Name,
 	}
 	if !input.DueDate.IsZero() {
-		result.DueDateTime.DateTime = input.DueDate.Format(timeDueDateLayout)
-		result.DueDateTime.TimeZone = defaultTimeZone
+		result.DueDateTime = &msOdataDateTime{
+			DateTime: input.DueDate.Format(timeDueDateLayout),
+			TimeZone: defaultTimeZone,
+		}
+	}
+	if input.Description != "" {
+		result.Body = &bodyItem{
+			Content:     input.Description,
+			ContentType: "text",
+		}
 	}
 
 	return result
@@ -244,13 +259,20 @@ func (msToDo *MSToDo) getChildrenMSTasks(parentId string) ([]msTask, error) {
 					dueDate = time.Time{}
 				}
 			}
-			result = append(result, msTask{
+
+			item := msTask{
 				ID:           task.ID,
 				DisplayName:  task.Title,
 				DueDate:      dueDate,
 				CreationDate: *task.CreationDateTime,
 				ListID:       parentId,
-			})
+			}
+			if task.Body.Content != "" {
+				item.BodyItem.Content = task.Body.Content
+				item.BodyItem.ContentType = task.Body.ContentType
+			}
+
+			result = append(result, item)
 		}
 		url = tasks.OdataNextlink
 	}

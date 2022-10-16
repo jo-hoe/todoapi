@@ -16,11 +16,12 @@ type TodoistClient struct {
 }
 
 type TodoistTask struct {
-	ID        string      `json:"id,omitempty"`
-	ProjectID string      `json:"project_id,omitempty"`
-	Content   string      `json:"content,omitempty"`
-	Created   time.Time   `json:"created,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
-	Due       *TodoistDue `json:"due,omitempty"`
+	ID          string      `json:"id,omitempty"`
+	ProjectID   string      `json:"project_id,omitempty"`
+	Content     string      `json:"content,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Created     time.Time   `json:"created,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
+	Due         *TodoistDue `json:"due,omitempty"`
 }
 
 type TodoistProject struct {
@@ -199,6 +200,7 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 	result := todoclient.ToDoTask{
 		ID:           task.ID,
 		Name:         task.Content,
+		Description:  task.Description,
 		DueDate:      dueDate,
 		CreationTime: task.Created,
 	}
@@ -208,8 +210,9 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 // converts but does not convert creation date
 func convertTodoistTask(task todoclient.ToDoTask) (*TodoistTask, error) {
 	result := TodoistTask{
-		ID:      task.ID,
-		Content: task.Name,
+		ID:          task.ID,
+		Content:     task.Name,
+		Description: task.Description,
 	}
 
 	if !task.CreationTime.IsZero() {

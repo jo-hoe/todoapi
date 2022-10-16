@@ -7,6 +7,7 @@ import (
 type ToDoTask struct {
 	ID           string
 	Name         string
+	Description  string
 	DueDate      time.Time
 	CreationTime time.Time
 }
