@@ -153,7 +153,7 @@ const demoTask = `{
 	"is_completed": false,
 	"label_ids": [],
 	"priority": "1",
-	"comment_count": "0",
+	"comment_count": 0,
 	"creator": "16460291",
 	"created": "2021-10-02T18:57:07Z",
 	"due": {
@@ -177,7 +177,7 @@ const demoList = `[
 			"is_completed": false,
 			"label_ids": [],
 			"priority": "1",
-			"comment_count": "0",
+			"comment_count": 0,
 			"creator": 16460291,
 			"created": "2021-09-28T23:07:29Z",
 			"url": "https://todoist.com/showTask?id=5196276900"
@@ -193,7 +193,7 @@ const demoList = `[
 			"is_completed": false,
 			"label_ids": [],
 			"priority": "1",
-			"comment_count": "0",
+			"comment_count": 0,
 			"creator": "16460291",
 			"created": "2021-10-02T18:57:07Z",
 			"due": {
@@ -214,7 +214,7 @@ const demoList = `[
 			"is_completed": false,
 			"label_ids": [],
 			"priority": "1",
-			"comment_count": "0",
+			"comment_count": 0,
 			"creator": "16460291",
 			"created": "2021-10-04T07:42:51Z",
 			"url": "https://todoist.com/showTask?id=5210371268"
@@ -233,7 +233,7 @@ const demoListProject = `[
 			"is_completed": false,
 			"label_ids": [],
 			"priority": "1",
-			"comment_count": "0",
+			"comment_count": 0,
 			"creator": "16460291",
 			"created": "2021-09-28T23:07:29Z",
 			"url": "https://todoist.com/showTask?id=5196276900"

@@ -16,12 +16,17 @@ type TodoistClient struct {
 }
 
 type TodoistTask struct {
-	ID          string      `json:"id,omitempty"`
-	ProjectID   string      `json:"project_id,omitempty"`
-	Content     string      `json:"content,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Created     time.Time   `json:"created,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
-	Due         *TodoistDue `json:"due,omitempty"`
+	ID           string      `json:"id,omitempty"`
+	ProjectID    string      `json:"project_id,omitempty"`
+	Content      string      `json:"content,omitempty"`
+	Description  string      `json:"description,omitempty"`
+	CommentCount uint        `json:"comment_count,omitempty"`
+	Created      time.Time   `json:"created,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
+	Due          *TodoistDue `json:"due,omitempty"`
+}
+
+type TodoistComment struct {
+	Content string `json:"content,omitempty"`
 }
 
 type TodoistProject struct {
@@ -34,11 +39,12 @@ type TodoistDue struct {
 }
 
 const (
-	todoistURL        = "https://api.todoist.com/rest/v2/"
-	todoistTasksUrl   = todoistURL + "tasks"
-	todoistTaskUrl    = todoistURL + "tasks/%s"
-	todoistParentsUrl = todoistURL + "projects"
-	timeDueDateLayout = "2006-01-02"
+	todoistUrl         = "https://api.todoist.com/rest/v2/"
+	todoistTasksUrl    = todoistUrl + "tasks"
+	todoistTaskUrl     = todoistUrl + "tasks/%s"
+	todoistParentsUrl  = todoistUrl + "projects"
+	todoistCommentsUrl = todoistUrl + "comments?task_id=%s"
+	timeDueDateLayout  = "2006-01-02"
 )
 
 // creates an http client with injects the REST API token for each request
@@ -76,12 +82,27 @@ func (client *TodoistClient) CreateTask(parentId string, task todoclient.ToDoTas
 	}
 
 	// convert task
-	temp, err := convertToToDoTask(responseObject)
+	temp, err := client.convertToToDoTask(responseObject)
 	if err != nil {
 		return result, err
 	}
 
 	return *temp, err
+}
+
+func (client *TodoistClient) getComments(taskId string) ([]string, error) {
+	comments := make([]TodoistComment, 0)
+	err := client.getData(fmt.Sprintf(todoistCommentsUrl, taskId), &comments)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, 0)
+	for _, comment := range comments {
+		result = append(result, comment.Content)
+	}
+
+	return result, nil
 }
 
 func (client *TodoistClient) UpdateTask(parentId string, task todoclient.ToDoTask) error {
@@ -159,7 +180,7 @@ func (client *TodoistClient) getTasks(parentId *string) (tasks []todoclient.ToDo
 
 	tasks = make([]todoclient.ToDoTask, 0)
 	for _, task := range todoistTasks {
-		convertedTask, err := convertToToDoTask(task)
+		convertedTask, err := client.convertToToDoTask(task)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +208,7 @@ func (client *TodoistClient) getData(url string, data interface{}) error {
 	return nil
 }
 
-func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
+func (client *TodoistClient) convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 	dueDate := time.Time{}
 	if task.Due != nil {
 		deserializedTime, err := time.Parse(timeDueDateLayout, task.Due.Date)
@@ -197,6 +218,7 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 			dueDate = time.Time{}
 		}
 	}
+
 	result := todoclient.ToDoTask{
 		ID:           task.ID,
 		Name:         task.Content,
@@ -204,6 +226,20 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 		DueDate:      dueDate,
 		CreationTime: task.Created,
 	}
+
+	if task.CommentCount > 0 {
+		comments, err := client.getComments(task.ID)
+		if err != nil {
+			return &result, nil
+		}
+		for _, comment := range comments {
+			if len(result.Description) > 0 {
+				result.Description += "\n"
+			}
+			result.Description += comment
+		}
+	}
+
 	return &result, nil
 }
 
