@@ -2,9 +2,8 @@ package todoist
 
 import (
 	"bytes"
-	"io"
+	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,7 +16,7 @@ func TestTodoistClient_ImplementationTest(t *testing.T) {
 }
 
 func TestTodoistClient_GetAllTasks(t *testing.T) {
-	client := NewTodoistClient(createMockClient())
+	client := NewTodoistClient(createMockClient(demoList))
 
 	tasks, err := client.GetAllTasks()
 
@@ -31,7 +30,7 @@ func TestTodoistClient_GetAllTasks(t *testing.T) {
 
 func TestTodoistClient_GetChildrenTasks(t *testing.T) {
 	mockProjectId := "2180393141"
-	client := NewTodoistClient(createMockClient())
+	client := NewTodoistClient(createMockClient(demoListProject))
 
 	tasks, err := client.GetChildrenTasks(mockProjectId)
 
@@ -44,7 +43,7 @@ func TestTodoistClient_GetChildrenTasks(t *testing.T) {
 }
 
 func TestTodoistClient_UpdateTask(t *testing.T) {
-	client := NewTodoistClient(createMockClient())
+	client := NewTodoistClient(createMockClient(demoListProject))
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
 		Name:         "mockTitle",
@@ -60,7 +59,7 @@ func TestTodoistClient_UpdateTask(t *testing.T) {
 }
 
 func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
-	client := NewTodoistClient(createMockClient())
+	client := NewTodoistClient(createMockClient(demoListProject))
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
 		Name:         "mockTitle",
@@ -90,23 +89,14 @@ func NewMockClient(fn RoundTripFunc) *http.Client {
 	}
 }
 
-func createMockClient() *http.Client {
-	return NewMockClient(func(req *http.Request) *http.Response {
-		// Test request parameters
-		body := ""
-		if strings.HasSuffix(req.URL.String(), todoistTasksUrl) {
-			body = demoList
-		} else if strings.HasPrefix(req.URL.String(), todoistURL) {
-			body = demoListProject
-
-		}
-
-		statusCode := 200
-
+func createMockClient(bodies ...string) *http.Client {
+	i := -1
+	return NewMockClient(func(_ *http.Request) *http.Response {
+		i = i + 1
 		return &http.Response{
-			StatusCode: statusCode,
+			StatusCode: 200,
 			// Send response to be tested
-			Body: io.NopCloser(bytes.NewBufferString(body)),
+			Body: ioutil.NopCloser(bytes.NewBufferString(bodies[i])),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
 		}
