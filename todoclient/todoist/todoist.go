@@ -23,12 +23,21 @@ type TodoistTask struct {
 	Due     *TodoistDue `json:"due,omitempty"`
 }
 
+type TodoistProject struct {
+	ID   uint64 `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
 type TodoistDue struct {
 	Date string `json:"date,omitempty" examples:"2021-11-08"`
 }
 
-var todoistURL = "https://api.todoist.com/rest/v1/tasks"
-var timeDueDateLayout = "2006-01-02"
+const (
+	todoistURL        = "https://api.todoist.com/rest/v1/"
+	todoistTasksUrl   = todoistURL + "tasks"
+	todoistParentsUrl = todoistURL + "projects"
+	timeDueDateLayout = "2006-01-02"
+)
 
 // creates an http client with injects the REST API token for each request
 func NewTodoistHttpClient(token string) *http.Client {
@@ -50,8 +59,24 @@ func (client *TodoistClient) DeleteTask(task todoclient.ToDoTask) error {
 	return nil
 }
 
-func (client *TodoistClient) GetAllParents() (todoclient.ToDoParent, error) {
-	return todoclient.ToDoParent{}, nil
+func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {
+	result := make([]todoclient.ToDoParent, 0)
+	projects := make([]TodoistProject, 0)
+
+	err := client.getData(todoistParentsUrl, &projects)
+	if err != nil {
+		return result, err
+	}
+
+	for _, project := range projects {
+		parent := todoclient.ToDoParent{
+			ID:   fmt.Sprint(project.ID),
+			Name: project.Name,
+		}
+		result = append(result, parent)
+	}
+
+	return result, nil
 }
 
 func (client *TodoistClient) GetAllTasks() (tasks []todoclient.ToDoTask, err error) {
@@ -65,7 +90,7 @@ func (client *TodoistClient) GetChildrenTasks(parentId string) (tasks []todoclie
 func (client *TodoistClient) getTasks(parentId *string) (tasks []todoclient.ToDoTask, err error) {
 	todoistTasks := make([]TodoistTask, 0)
 
-	url := todoistURL
+	url := todoistTasksUrl
 	if parentId != nil {
 		url = url + "?project_id=" + *parentId
 	}
@@ -94,7 +119,7 @@ func (client *TodoistClient) UpdateTask(task todoclient.ToDoTask) error {
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	resp, err := client.httpClient.Post(todoistURL+"/"+task.ID, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := client.httpClient.Post(todoistTasksUrl+"/"+task.ID, "application/json", bytes.NewBuffer(jsonPayload))
 	if resp.StatusCode != 204 {
 		return fmt.Errorf("%+v", resp.Status)
 	}

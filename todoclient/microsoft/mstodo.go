@@ -141,8 +141,8 @@ func (msToDo *MSToDo) DeleteTask(task todoclient.ToDoTask) error {
 	return nil
 }
 
-func (msToDo *MSToDo) GetAllParents() (todoclient.ToDoParent, error) {
-	return todoclient.ToDoParent{}, nil
+func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {
+	return []todoclient.ToDoParent{}, nil
 }
 
 func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDoTask, err error) {
