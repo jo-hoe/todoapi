@@ -2,7 +2,6 @@ package microsoft
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 
@@ -29,12 +28,12 @@ func createClient(t *testing.T) *MSToDo {
 	}
 
 	msClientConfig := MSClientConfig{}
-	err := json.Unmarshal([]byte(fmt.Sprintf("%v", token)), &msClientConfig.Token)
+	err := json.Unmarshal([]byte(token), &msClientConfig.Token)
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
 	}
 
-	err = json.Unmarshal([]byte(fmt.Sprintf("%v", clientCredentials)), &msClientConfig.ClientCredentials)
+	err = json.Unmarshal([]byte(clientCredentials), &msClientConfig.ClientCredentials)
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
 	}

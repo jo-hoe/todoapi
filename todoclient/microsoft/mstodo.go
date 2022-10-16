@@ -10,7 +10,12 @@ import (
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
-const listURL = "https://graph.microsoft.com/v1.0/me/todo/lists/"
+const (
+	todoAPIURL = "https://graph.microsoft.com/v1.0/me/todo/"
+	listsURL   = todoAPIURL + "lists/"
+	tasksURL   = listsURL + "%s/tasks/" // %s = parent id
+	taskURL    = tasksURL + "%s"        // %s = parent id; %s = task id
+)
 
 type MSToDo struct {
 	client    *http.Client
@@ -122,7 +127,7 @@ func (msToDo *MSToDo) UpdateTask(parentId string, task todoclient.ToDoTask) erro
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(http.MethodPut, listURL+listId+"/tasks/"+task.ID, bytes.NewBuffer(jsonPayload))
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf(taskURL, listId, task.ID), bytes.NewBuffer(jsonPayload))
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := msToDo.client.Do(req)
 
@@ -142,7 +147,21 @@ func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
 }
 
 func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {
-	panic("unimplemented")
+	result := make([]todoclient.ToDoParent, 0)
+
+	lists, err := msToDo.getTaskLists()
+	if err != nil {
+		return result, err
+	}
+
+	for _, list := range lists.Value {
+		result = append(result, todoclient.ToDoParent{
+			ID:   list.ID,
+			Name: list.DisplayName,
+		})
+	}
+
+	return result, err
 }
 
 func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDoTask, err error) {
@@ -156,7 +175,7 @@ func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDo
 func (msToDo *MSToDo) getChildrenMSTasks(parentId string) ([]msTask, error) {
 	result := []msTask{}
 	timeDueDateLayout := "2006-01-02T15:04:05.9999999" // this weird MS format is not used consistently in JSON object
-	url := listURL + parentId + "/tasks"
+	url := fmt.Sprintf(tasksURL, parentId)
 	for url != "" {
 		tasks := msOdataTasks{}
 		err := msToDo.getData(url, &tasks)
@@ -189,10 +208,10 @@ func (msToDo *MSToDo) getChildrenMSTasks(parentId string) ([]msTask, error) {
 
 func (msToDo *MSToDo) getTaskLists() (*msOdataLists, error) {
 	lists := msOdataLists{}
-	url := listURL
+	url := listsURL
 	for url != "" {
 		tmpList := msOdataLists{}
-		err := msToDo.getData(listURL, &tmpList)
+		err := msToDo.getData(url, &tmpList)
 		if err != nil {
 			return nil, err
 		}

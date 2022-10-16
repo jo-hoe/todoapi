@@ -9,12 +9,21 @@
             // the .env file is expected to contain the todoist api token 
             // TODOIST_API_TOKEN=sometoken
             "envFile": "${workspaceFolder}/todoclient/todoist/.env",
-        }
+        },{
+          "name": "MS Do To Integration Test",
+          "type": "go",
+          "request": "launch",
+          "program": "${workspaceFolder}/todoclient/microsoft/mstodo_integration_test.go",
+          // the .env file is expected to contain the todoist api token 
+          // MSCLIENTCREDENTIALS={"clientId": "348db86d-b5...
+          // MSTOKEN={"token_type": "Bearer", "sco....
+          "envFile": "${workspaceFolder}/todoclient/microsoft/.env",
+      }
     ],
     "compounds": [
       {
         "name": "All Integration Tests",
-        "configurations": ["Todoist Integration Test"],
+        "configurations": ["Todoist Integration Test", "MS Do To Integration Test"],
         "stopAll": true
       }
     ]
