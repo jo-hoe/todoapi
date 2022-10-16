@@ -14,8 +14,9 @@ import (
 const (
 	todoAPIURL = "https://graph.microsoft.com/v1.0/me/todo/"
 	listsURL   = todoAPIURL + "lists/"
-	tasksURL   = listsURL + "%s/tasks/" // %s = parent id
-	taskURL    = tasksURL + "%s"        // %s = parent id; %s = task id
+	listURL    = listsURL + "%s/"   // %s = list id
+	tasksURL   = listURL + "tasks/" // %s = list id
+	taskURL    = tasksURL + "%s"    // %s = list id; %s = task id
 
 	timeDueDateLayout = "2006-01-02T15:04:05.9999999" // this weird MS format is not used consistently in JSON object
 	defaultTimeZone   = "Etc/GMT"
@@ -48,7 +49,7 @@ type msOdataLists struct {
 }
 
 type msOdataListDetails struct {
-	ID          string `json:"id"`
+	ID          string `json:"id,omitempty"`
 	DisplayName string `json:"displayName"`
 }
 
@@ -197,7 +198,11 @@ func (msToDo *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (res
 }
 
 func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf(taskURL, parentId, taskId), nil)
+	return msToDo.deleteObject(fmt.Sprintf(taskURL, parentId, taskId))
+}
+
+func (msToDo *MSToDo) deleteObject(url string) error {
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return err
 	}
@@ -213,12 +218,49 @@ func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
 	return err
 }
 
-func (client *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, error) {
-	panic("unimplemented")
+func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, error) {
+	result := todoclient.ToDoParent{}
+	payload := msOdataListDetails{
+		DisplayName: parentName,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return result, err
+	}
+
+	// send request
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf(listsURL), bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := msToDo.client.Do(req)
+	if resp.StatusCode != 201 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return result, err
+		}
+		return result, fmt.Errorf("received error: %+v", string(b))
+	}
+
+	// decode request
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	data := msOdataListDetails{}
+	err = decoder.Decode(&data)
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+
+	result.ID = data.ID
+	result.Name = data.DisplayName
+
+	return result, err
 }
 
-func (client *MSToDo) DeleteParent(parent todoclient.ToDoParent) error {
-	panic("unimplemented")
+func (client *MSToDo) DeleteParent(parentId string) error {
+	return client.deleteObject(fmt.Sprintf(listURL, parentId))
 }
 
 func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {

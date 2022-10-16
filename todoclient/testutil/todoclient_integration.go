@@ -32,7 +32,7 @@ func IntegrationTest_Parents(t *testing.T, client todoclient.ToDoClient) {
 		t.Error("expected more than 0 tasks")
 	}
 
-	err = client.DeleteParent(parent)
+	err = client.DeleteParent(parent.ID)
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
 	}

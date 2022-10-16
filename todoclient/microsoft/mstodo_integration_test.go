@@ -12,6 +12,10 @@ func TestMSToDo_Integration_GetAllTasks(t *testing.T) {
 	testutil.IntegrationTest_GetAllTasks(t, createClient(t))
 }
 
+func TestMSToDo_Integration_Parents(t *testing.T) {
+	testutil.IntegrationTest_Parents(t, createClient(t))
+}
+
 func TestMSToDo_Integration_CRUD(t *testing.T) {
 	testutil.IntegrationTest_CRUD(t, createClient(t))
 }

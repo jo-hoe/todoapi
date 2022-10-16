@@ -171,8 +171,8 @@ func (client *TodoistClient) CreateParent(parentName string) (todoclient.ToDoPar
 	return result, err
 }
 
-func (client *TodoistClient) DeleteParent(parent todoclient.ToDoParent) error {
-	return client.deleteObject(fmt.Sprintf(todoistParentUrl, parent.ID))
+func (client *TodoistClient) DeleteParent(parentId string) error {
+	return client.deleteObject(fmt.Sprintf(todoistParentUrl, parentId))
 }
 
 func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {

@@ -28,5 +28,5 @@ type ToDoClient interface {
 	GetAllParents() ([]ToDoParent, error)
 
 	CreateParent(parentName string) (ToDoParent, error)
-	DeleteParent(parent ToDoParent) error
+	DeleteParent(parentId string) error
 }
