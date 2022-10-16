@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	customhttp "github.com/jo-hoe/todoapi/http"
@@ -17,24 +16,26 @@ type TodoistClient struct {
 }
 
 type TodoistTask struct {
-	ID      uint64      `json:"id,omitempty"`
-	Content string      `json:"content,omitempty"`
-	Created time.Time   `json:"created,omitempty" examples:"2020-04-06T07:31:55Z"`
-	Due     *TodoistDue `json:"due,omitempty"`
+	ID        string      `json:"id,omitempty"`
+	ProjectID string      `json:"project_id,omitempty"`
+	Content   string      `json:"content,omitempty"`
+	Created   time.Time   `json:"created,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
+	Due       *TodoistDue `json:"due,omitempty"`
 }
 
 type TodoistProject struct {
-	ID   uint64 `json:"id,omitempty"`
+	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
 }
 
 type TodoistDue struct {
-	Date string `json:"date,omitempty" examples:"2021-11-08"`
+	Date string `json:"date,omitempty" examples:"2022-10-16T11:53:16.720180Z"`
 }
 
 const (
-	todoistURL        = "https://api.todoist.com/rest/v1/"
+	todoistURL        = "https://api.todoist.com/rest/v2/"
 	todoistTasksUrl   = todoistURL + "tasks"
+	todoistTaskUrl    = todoistURL + "tasks/%s"
 	todoistParentsUrl = todoistURL + "projects"
 	timeDueDateLayout = "2006-01-02"
 )
@@ -51,12 +52,67 @@ func NewTodoistClient(httpClient *http.Client) *TodoistClient {
 	return client
 }
 
-func (client *TodoistClient) CreateTask(task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
-	return todoclient.ToDoTask{}, nil
+func (client *TodoistClient) CreateTask(parentId string, task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
+	result := todoclient.ToDoTask{}
+	payload, err := convertTodoistTask(task)
+	if err != nil {
+		return result, err
+	}
+	payload.ProjectID = parentId
+
+	// create task
+	jsonPayload, _ := json.Marshal(payload)
+	resp, err := client.httpClient.Post(todoistTasksUrl, "application/json", bytes.NewBuffer(jsonPayload))
+	if resp.StatusCode != 200 {
+		return result, fmt.Errorf("%+v", resp.Status)
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	responseObject := TodoistTask{}
+	err = decoder.Decode(&responseObject)
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+
+	// convert task
+	temp, err := convertToToDoTask(responseObject)
+	if err != nil {
+		return result, err
+	}
+
+	return *temp, err
 }
 
-func (client *TodoistClient) DeleteTask(task todoclient.ToDoTask) error {
-	return nil
+func (client *TodoistClient) UpdateTask(parentId string, task todoclient.ToDoTask) error {
+	payload, err := convertTodoistTask(task)
+	if err != nil {
+		return err
+	}
+
+	jsonPayload, _ := json.Marshal(payload)
+	resp, err := client.httpClient.Post(fmt.Sprintf(todoistTaskUrl, task.ID), "application/json", bytes.NewBuffer(jsonPayload))
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("%+v", resp.Status)
+	}
+
+	return err
+}
+
+func (client *TodoistClient) DeleteTask(parentId string, taskId string) error {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf(todoistTaskUrl, taskId), nil)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	return err
 }
 
 func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {
@@ -112,21 +168,6 @@ func (client *TodoistClient) getTasks(parentId *string) (tasks []todoclient.ToDo
 	return tasks, nil
 }
 
-func (client *TodoistClient) UpdateTask(task todoclient.ToDoTask) error {
-	payload, err := convertTodoistTask(task)
-	if err != nil {
-		return err
-	}
-
-	jsonPayload, _ := json.Marshal(payload)
-	resp, err := client.httpClient.Post(todoistTasksUrl+"/"+task.ID, "application/json", bytes.NewBuffer(jsonPayload))
-	if resp.StatusCode != 204 {
-		return fmt.Errorf("%+v", resp.Status)
-	}
-
-	return err
-}
-
 func (client *TodoistClient) getData(url string, data interface{}) error {
 	resp, err := client.httpClient.Get(url)
 	if err != nil {
@@ -156,8 +197,8 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 		}
 	}
 	result := todoclient.ToDoTask{
-		ID:           strconv.FormatUint(task.ID, 10),
-		Name:        task.Content,
+		ID:           task.ID,
+		Name:         task.Content,
 		DueDate:      dueDate,
 		CreationTime: task.Created,
 	}
@@ -166,12 +207,8 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 
 // converts but does not convert creation date
 func convertTodoistTask(task todoclient.ToDoTask) (*TodoistTask, error) {
-	id, err := strconv.ParseUint(string(task.ID), 10, 64)
-	if err != nil {
-		return nil, err
-	}
 	result := TodoistTask{
-		ID:      id,
+		ID:      task.ID,
 		Content: task.Name,
 	}
 

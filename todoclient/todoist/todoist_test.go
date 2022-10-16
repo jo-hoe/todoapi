@@ -47,12 +47,12 @@ func TestTodoistClient_UpdateTask(t *testing.T) {
 	client := NewTodoistClient(createMockClient())
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
-		Name:        "mockTitle",
+		Name:         "mockTitle",
 		DueDate:      time.Now(),
 		CreationTime: time.Now(),
 	}
 
-	err := client.UpdateTask(task)
+	err := client.UpdateTask("2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -63,12 +63,12 @@ func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 	client := NewTodoistClient(createMockClient())
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
-		Name:        "mockTitle",
+		Name:         "mockTitle",
 		DueDate:      time.Time{},
 		CreationTime: time.Now(),
 	}
 
-	err := client.UpdateTask(task)
+	err := client.UpdateTask("2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -94,7 +94,7 @@ func createMockClient() *http.Client {
 	return NewMockClient(func(req *http.Request) *http.Response {
 		// Test request parameters
 		body := ""
-		if strings.HasSuffix(req.URL.String(), todoistURL) {
+		if strings.HasSuffix(req.URL.String(), todoistTasksUrl) {
 			body = demoList
 		} else if strings.HasPrefix(req.URL.String(), todoistURL) {
 			body = demoListProject
@@ -102,9 +102,6 @@ func createMockClient() *http.Client {
 		}
 
 		statusCode := 200
-		if req.Method == "POST" {
-			statusCode = 204
-		}
 
 		return &http.Response{
 			StatusCode: statusCode,
@@ -118,34 +115,34 @@ func createMockClient() *http.Client {
 
 const demoList = `[
 	{
-			"id": 5196276900,
-			"assigner": 0,
-			"project_id": 2180393141,
-			"section_id": 0,
-			"order": 56,
+			"id": "5196276900",
+			"assigner": "0",
+			"project_id": "2180393141",
+			"section_id": "0",
+			"order": "56",
 			"content": "buff",
 			"description": "",
-			"completed": false,
+			"is_completed": false,
 			"label_ids": [],
-			"priority": 1,
-			"comment_count": 0,
+			"priority": "1",
+			"comment_count": "0",
 			"creator": 16460291,
 			"created": "2021-09-28T23:07:29Z",
 			"url": "https://todoist.com/showTask?id=5196276900"
 	},
 	{
-			"id": 5207162814,
-			"assigner": 0,
-			"project_id": 2180393145,
-			"section_id": 0,
-			"order": 57,
+			"id": "5207162814",
+			"assigner": "0",
+			"project_id": "2180393145",
+			"section_id": "0",
+			"order": "57",
 			"content": "stuff",
 			"description": "",
-			"completed": false,
+			"is_completed": false,
 			"label_ids": [],
-			"priority": 1,
-			"comment_count": 0,
-			"creator": 16460291,
+			"priority": "1",
+			"comment_count": "0",
+			"creator": "16460291",
 			"created": "2021-10-02T18:57:07Z",
 			"due": {
 					"recurring": false,
@@ -155,18 +152,18 @@ const demoList = `[
 			"url": "https://todoist.com/showTask?id=5207162814"
 	},
 	{
-			"id": 5210371268,
-			"assigner": 0,
-			"project_id": 2180393145,
-			"section_id": 0,
-			"order": 58,
+			"id": "5210371268",
+			"assigner": "0",
+			"project_id": "2180393145",
+			"section_id": "0",
+			"order": "58",
 			"content": "things",
 			"description": "",
-			"completed": false,
+			"is_completed": false,
 			"label_ids": [],
-			"priority": 1,
-			"comment_count": 0,
-			"creator": 16460291,
+			"priority": "1",
+			"comment_count": "0",
+			"creator": "16460291",
 			"created": "2021-10-04T07:42:51Z",
 			"url": "https://todoist.com/showTask?id=5210371268"
 	}
@@ -174,18 +171,18 @@ const demoList = `[
 
 const demoListProject = `[
 	{
-			"id": 5196276900,
-			"assigner": 0,
-			"project_id": 2180393141,
-			"section_id": 0,
-			"order": 56,
-			"content": "buff",
+			"id": "5196276900",
+			"assigner": "0",
+			"project_id": "2180393141",
+			"section_id": "0",
+			"order": "56",
+			"content": "buffy",
 			"description": "",
-			"completed": false,
+			"is_completed": false,
 			"label_ids": [],
-			"priority": 1,
-			"comment_count": 0,
-			"creator": 16460291,
+			"priority": "1",
+			"comment_count": "0",
+			"creator": "16460291",
 			"created": "2021-09-28T23:07:29Z",
 			"url": "https://todoist.com/showTask?id=5196276900"
 	}

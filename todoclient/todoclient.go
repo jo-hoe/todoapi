@@ -6,7 +6,7 @@ import (
 
 type ToDoTask struct {
 	ID           string
-	Name        string
+	Name         string
 	DueDate      time.Time
 	CreationTime time.Time
 }
@@ -21,7 +21,7 @@ type ToDoClient interface {
 	GetChildrenTasks(parentId string) (tasks []ToDoTask, err error)
 	GetAllParents() ([]ToDoParent, error)
 
-	CreateTask(task ToDoTask) (ToDoTask, error)
-	UpdateTask(task ToDoTask) error
-	DeleteTask(task ToDoTask) error
+	CreateTask(parentId string, task ToDoTask) (ToDoTask, error)
+	UpdateTask(parentId string, task ToDoTask) error
+	DeleteTask(parentId string, taskId string) error
 }

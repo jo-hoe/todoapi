@@ -92,7 +92,7 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 
 		result = append(result, todoclient.ToDoTask{
 			ID:           task.ID,
-			Name:        task.DisplayName,
+			Name:         task.DisplayName,
 			DueDate:      task.DueDate,
 			CreationTime: task.CreationDate,
 		})
@@ -103,7 +103,7 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 	return result
 }
 
-func (msToDo *MSToDo) UpdateTask(task todoclient.ToDoTask) error {
+func (msToDo *MSToDo) UpdateTask(parentId string, task todoclient.ToDoTask) error {
 	// check if items id is known in cache and the list id can therefore be retrieved
 	if _, ok := msToDo.taskCache[task.ID]; !ok {
 		_, err := msToDo.GetAllTasks()
@@ -133,11 +133,11 @@ func (msToDo *MSToDo) UpdateTask(task todoclient.ToDoTask) error {
 	return err
 }
 
-func (client *MSToDo) CreateTask(task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
+func (client *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
 	return todoclient.ToDoTask{}, nil
 }
 
-func (msToDo *MSToDo) DeleteTask(task todoclient.ToDoTask) error {
+func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
 	return nil
 }
 

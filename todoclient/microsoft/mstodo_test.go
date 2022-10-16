@@ -26,7 +26,6 @@ func NewMockClient(fn RoundTripFunc) *http.Client {
 	}
 }
 
-
 func TestTodoistClient_ImplementationTest(t *testing.T) {
 	// tests if interface is implemented
 	var _ todoclient.ToDoClient = (*MSToDo)(nil)
@@ -91,9 +90,9 @@ func TestMSToDo_UpdateTask(t *testing.T) {
 
 	api := NewMSToDo(client)
 
-	err := api.UpdateTask(todoclient.ToDoTask{
+	err := api.UpdateTask("demo", todoclient.ToDoTask{
 		ID:      "atask",
-		Name:   "test",
+		Name:    "test",
 		DueDate: time.Now(),
 	})
 

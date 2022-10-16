@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/jo-hoe/todoapi/todoclient"
 )
 
 func TestTodoistClient_Integration_GetAllTasks(t *testing.T) {
@@ -18,15 +21,37 @@ func TestTodoistClient_Integration_GetAllTasks(t *testing.T) {
 	}
 }
 
-func TestTodoistClient_Integration_GetParents(t *testing.T) {
+func TestTodoistClient_Integration_CRUD(t *testing.T) {
 	client := createClient()
-	tasks, err := client.GetAllParents()
-
+	// test get parents
+	parents, err := client.GetAllParents()
 	if err != nil {
-		t.Errorf("error was not nil but '%v'", err)
+		t.Errorf("could not get parents '%v'", err)
 	}
-	if len(tasks) <= 0 {
+	if len(parents) <= 0 {
 		t.Error("expected more than 0 parent")
+	}
+
+	// test create
+	task, err := client.CreateTask(parents[0].ID, todoclient.ToDoTask{
+		Name:    "test",
+		DueDate: time.Now(),
+	})
+	if err != nil {
+		t.Errorf("issue creating task '%v'", err)
+	}
+
+	// test update
+	task.Name = "testUpdate"
+	err = client.UpdateTask(parents[0].ID, task)
+	if err != nil {
+		t.Errorf("issue updating task '%v'", err)
+	}
+
+	// test delete
+	err = client.DeleteTask(parents[0].ID, task.ID)
+	if err != nil {
+		t.Errorf("issue updating task '%v'", err)
 	}
 }
 
