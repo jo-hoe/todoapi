@@ -5,8 +5,8 @@
 
 API for todo applications.
 
-[x] Todoist
-[x] MS To Do
+- [x] Todoist
+- [x] MS To Do
 
 ## Linting
 
