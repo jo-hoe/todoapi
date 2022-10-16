@@ -134,15 +134,15 @@ func (msToDo *MSToDo) UpdateTask(parentId string, task todoclient.ToDoTask) erro
 }
 
 func (client *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
-	return todoclient.ToDoTask{}, nil
+	panic("unimplemented")
 }
 
 func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
-	return nil
+	panic("unimplemented")
 }
 
 func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {
-	return []todoclient.ToDoParent{}, nil
+	panic("unimplemented")
 }
 
 func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDoTask, err error) {
