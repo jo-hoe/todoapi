@@ -47,7 +47,7 @@ func TestTodoistClient_UpdateTask(t *testing.T) {
 	client := NewTodoistClient(createMockClient())
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
-		Title:        "mockTitle",
+		Name:        "mockTitle",
 		DueDate:      time.Now(),
 		CreationTime: time.Now(),
 	}
@@ -63,7 +63,7 @@ func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 	client := NewTodoistClient(createMockClient())
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
-		Title:        "mockTitle",
+		Name:        "mockTitle",
 		DueDate:      time.Time{},
 		CreationTime: time.Now(),
 	}

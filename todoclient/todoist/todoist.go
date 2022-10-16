@@ -157,7 +157,7 @@ func convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
 	}
 	result := todoclient.ToDoTask{
 		ID:           strconv.FormatUint(task.ID, 10),
-		Title:        task.Content,
+		Name:        task.Content,
 		DueDate:      dueDate,
 		CreationTime: task.Created,
 	}
@@ -172,7 +172,7 @@ func convertTodoistTask(task todoclient.ToDoTask) (*TodoistTask, error) {
 	}
 	result := TodoistTask{
 		ID:      id,
-		Content: task.Title,
+		Content: task.Name,
 	}
 
 	if !task.CreationTime.IsZero() {

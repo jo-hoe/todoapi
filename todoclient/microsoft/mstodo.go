@@ -92,7 +92,7 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 
 		result = append(result, todoclient.ToDoTask{
 			ID:           task.ID,
-			Title:        task.DisplayName,
+			Name:        task.DisplayName,
 			DueDate:      task.DueDate,
 			CreationTime: task.CreationDate,
 		})
@@ -115,7 +115,7 @@ func (msToDo *MSToDo) UpdateTask(task todoclient.ToDoTask) error {
 	listId := msTask.ListID
 
 	payload := msOdataTask{
-		Title: task.Title,
+		Title: task.Name,
 	}
 	if !task.DueDate.IsZero() {
 		msTask.DueDate = task.DueDate

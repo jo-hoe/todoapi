@@ -72,8 +72,8 @@ func TestMSToDo_GetAllTask_CheckSerialization(t *testing.T) {
 	if len(task.ID) == 0 {
 		t.Error("ID is empty")
 	}
-	if len(task.Title) == 0 {
-		t.Error("Title is empty")
+	if len(task.Name) == 0 {
+		t.Error("Name is empty")
 	}
 	if testTime.After(task.DueDate) {
 		t.Errorf("DueDate has unexpected value %s", task.DueDate)
@@ -93,7 +93,7 @@ func TestMSToDo_UpdateTask(t *testing.T) {
 
 	err := api.UpdateTask(todoclient.ToDoTask{
 		ID:      "atask",
-		Title:   "test",
+		Name:   "test",
 		DueDate: time.Now(),
 	})
 
