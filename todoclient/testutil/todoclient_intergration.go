@@ -21,6 +21,23 @@ func IntegrationTest_GetAllTasks(t *testing.T, client todoclient.ToDoClient) {
 	}
 }
 
+func IntegrationTest_Parents(t *testing.T, client todoclient.ToDoClient) {
+	checkPrerequisites(t)
+
+	parent, err := client.CreateParent("test")
+	if err != nil {
+		t.Errorf("error was not nil but '%v'", err)
+	}
+	if len(parent.ID) <= 0 {
+		t.Error("expected more than 0 tasks")
+	}
+
+	err = client.DeleteParent(parent)
+	if err != nil {
+		t.Errorf("error was not nil but '%v'", err)
+	}
+}
+
 func IntegrationTest_CRUD(t *testing.T, client todoclient.ToDoClient) {
 	checkPrerequisites(t)
 

@@ -43,6 +43,7 @@ const (
 	todoistTasksUrl    = todoistUrl + "tasks"
 	todoistTaskUrl     = todoistUrl + "tasks/%s"
 	todoistParentsUrl  = todoistUrl + "projects"
+	todoistParentUrl   = todoistParentsUrl + "/%s"
 	todoistCommentsUrl = todoistUrl + "comments?task_id=%s"
 	timeDueDateLayout  = "2006-01-02"
 )
@@ -121,7 +122,11 @@ func (client *TodoistClient) UpdateTask(parentId string, task todoclient.ToDoTas
 }
 
 func (client *TodoistClient) DeleteTask(parentId string, taskId string) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf(todoistTaskUrl, taskId), nil)
+	return client.deleteObject(fmt.Sprintf(todoistTaskUrl, taskId))
+}
+
+func (client *TodoistClient) deleteObject(url string) error {
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -135,6 +140,39 @@ func (client *TodoistClient) DeleteTask(parentId string, taskId string) error {
 	defer resp.Body.Close()
 
 	return err
+}
+
+func (client *TodoistClient) CreateParent(parentName string) (todoclient.ToDoParent, error) {
+	result := todoclient.ToDoParent{}
+	payload := TodoistProject{
+		Name: parentName,
+	}
+
+	// create task
+	jsonPayload, _ := json.Marshal(payload)
+	resp, err := client.httpClient.Post(todoistParentsUrl, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+	if resp.StatusCode != 200 {
+		return result, fmt.Errorf("%+v", resp.Status)
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	responseObject := TodoistProject{}
+	err = decoder.Decode(&responseObject)
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+
+	result.ID = responseObject.ID
+	result.Name = responseObject.Name
+
+	return result, err
+}
+
+func (client *TodoistClient) DeleteParent(parent todoclient.ToDoParent) error {
+	return client.deleteObject(fmt.Sprintf(todoistParentUrl, parent.ID))
 }
 
 func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {

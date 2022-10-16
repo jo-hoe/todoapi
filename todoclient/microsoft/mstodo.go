@@ -213,6 +213,14 @@ func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
 	return err
 }
 
+func (client *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, error) {
+	panic("unimplemented")
+}
+
+func (client *MSToDo) DeleteParent(parent todoclient.ToDoParent) error {
+	panic("unimplemented")
+}
+
 func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {
 	result := make([]todoclient.ToDoParent, 0)
 
