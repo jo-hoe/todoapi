@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -15,11 +16,15 @@ const (
 	listsURL   = todoAPIURL + "lists/"
 	tasksURL   = listsURL + "%s/tasks/" // %s = parent id
 	taskURL    = tasksURL + "%s"        // %s = parent id; %s = task id
+
+	timeDueDateLayout = "2006-01-02T15:04:05.9999999" // this weird MS format is not used consistently in JSON object
+	defaultTimeZone   = "Etc/GMT"
 )
 
+// Client uses REST MS API
+// https://learn.microsoft.com/en-us/graph/api/resources/todo-overview?view=graph-rest-1.0
 type MSToDo struct {
-	client    *http.Client
-	taskCache map[string]msTask
+	client *http.Client
 }
 
 type msTask struct {
@@ -55,12 +60,12 @@ type msOdataTask struct {
 
 type msOdataDateTime struct {
 	DateTime string `json:"dateTime,omitempty" examples:"2020-08-25T04:00:00.0000000"`
+	TimeZone string `json:"timeZone,omitempty" examples:"Etc/GMT"`
 }
 
 func NewMSToDo(client *http.Client) *MSToDo {
 	mstodo := &MSToDo{
-		client:    client,
-		taskCache: make(map[string]msTask),
+		client: client,
 	}
 	return mstodo
 }
@@ -74,7 +79,6 @@ func (msToDo *MSToDo) GetAllTasks() (tasks []todoclient.ToDoTask, err error) {
 	}
 
 	result := make([]todoclient.ToDoTask, 0)
-	msToDo.taskCache = make(map[string]msTask)
 
 	for _, taskList := range taskLists.Value {
 		tasksInList, err := msToDo.getChildrenMSTasks(taskList.ID)
@@ -101,33 +105,30 @@ func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (task
 			DueDate:      task.DueDate,
 			CreationTime: task.CreationDate,
 		})
+	}
 
-		msToDo.taskCache[task.ID] = task
+	return result
+}
+
+func concertToMSToDoTask(input todoclient.ToDoTask) msOdataTask {
+	// create result
+	result := msOdataTask{
+		Title:       input.Name,
+		DueDateTime: &msOdataDateTime{},
+	}
+	if !input.DueDate.IsZero() {
+		result.DueDateTime.DateTime = input.DueDate.Format(timeDueDateLayout)
+		result.DueDateTime.TimeZone = defaultTimeZone
 	}
 
 	return result
 }
 
 func (msToDo *MSToDo) UpdateTask(parentId string, task todoclient.ToDoTask) error {
-	// check if items id is known in cache and the list id can therefore be retrieved
-	if _, ok := msToDo.taskCache[task.ID]; !ok {
-		_, err := msToDo.GetAllTasks()
-		if err != nil {
-			return err
-		}
-	}
-	msTask := msToDo.taskCache[task.ID]
-	listId := msTask.ListID
-
-	payload := msOdataTask{
-		Title: task.Name,
-	}
-	if !task.DueDate.IsZero() {
-		msTask.DueDate = task.DueDate
-	}
+	payload := concertToMSToDoTask(task)
 
 	jsonPayload, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf(taskURL, listId, task.ID), bytes.NewBuffer(jsonPayload))
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf(taskURL, parentId, task.ID), bytes.NewBuffer(jsonPayload))
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := msToDo.client.Do(req)
 
@@ -138,12 +139,63 @@ func (msToDo *MSToDo) UpdateTask(parentId string, task todoclient.ToDoTask) erro
 	return err
 }
 
-func (client *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
-	panic("unimplemented")
+func (msToDo *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (result todoclient.ToDoTask, err error) {
+	payload := concertToMSToDoTask(task)
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return result, err
+	}
+
+	// send request
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf(tasksURL, parentId), bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := msToDo.client.Do(req)
+	if resp.StatusCode != 201 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return result, err
+		}
+		return result, fmt.Errorf("received error: %+v", string(b))
+	}
+
+	// decode request
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	data := msOdataTask{}
+	err = decoder.Decode(&data)
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+	result.DueDate, err = time.Parse(timeDueDateLayout, data.DueDateTime.DateTime)
+	if err != nil {
+		return result, fmt.Errorf("could not decode data :%v", err)
+	}
+	result.Name = data.Title
+	result.ID = data.ID
+	result.CreationTime = *data.CreationDateTime
+
+	return result, err
 }
 
 func (msToDo *MSToDo) DeleteTask(parentId string, taskId string) error {
-	panic("unimplemented")
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf(taskURL, parentId, taskId), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := msToDo.client.Do(req)
+	if resp.StatusCode != 204 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("received error: %+v", string(b))
+	}
+
+	return err
 }
 
 func (msToDo *MSToDo) GetAllParents() ([]todoclient.ToDoParent, error) {
@@ -174,7 +226,6 @@ func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDo
 
 func (msToDo *MSToDo) getChildrenMSTasks(parentId string) ([]msTask, error) {
 	result := []msTask{}
-	timeDueDateLayout := "2006-01-02T15:04:05.9999999" // this weird MS format is not used consistently in JSON object
 	url := fmt.Sprintf(tasksURL, parentId)
 	for url != "" {
 		tasks := msOdataTasks{}
