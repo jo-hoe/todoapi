@@ -1,6 +1,9 @@
 # TodoAPI
 
-API for todo applications
+[![Test Status](https://github.com/jo-hoe/todoapi/workflows/test/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=test)
+[![Lint Status](https://github.com/jo-hoe/todoapi/workflows/lint/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=lint)
+
+API for todo applications.
 
 [x] Todoist
 [x] MS To Do
