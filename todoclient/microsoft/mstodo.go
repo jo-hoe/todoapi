@@ -230,12 +230,15 @@ func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, er
 	}
 
 	// send request
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf(listsURL), bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest(http.MethodPost, listsURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return result, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := msToDo.client.Do(req)
+	if err != nil {
+		return result, err
+	}
 	if resp.StatusCode != 201 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {

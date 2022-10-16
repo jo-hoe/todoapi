@@ -83,7 +83,7 @@ func TestTodoistClient_Create(t *testing.T) {
 		CreationTime: time.Now(),
 	}
 
-	task, err := client.CreateTask("2180393145", task)
+	_, err := client.CreateTask("2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
