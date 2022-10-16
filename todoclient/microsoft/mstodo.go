@@ -29,12 +29,13 @@ type MSToDo struct {
 }
 
 type msTask struct {
-	ID           string    `json:"id"`
-	DisplayName  string    `json:"displayName"`
-	BodyItem     bodyItem  `json:"bodyItem"`
-	DueDate      time.Time `json:"dueDateTime"`
-	CreationDate time.Time `json:"createdDateTime"`
-	ListID       string
+	ID             string              `json:"id"`
+	DisplayName    string              `json:"displayName"`
+	BodyItem       bodyItem            `json:"bodyItem"`
+	DueDate        time.Time           `json:"dueDateTime"`
+	CreationDate   time.Time           `json:"createdDateTime"`
+	CheckListItems []msDisplayNameItem `json:"checklistItems"`
+	ListID         string
 }
 
 type bodyItem struct {
@@ -43,12 +44,12 @@ type bodyItem struct {
 }
 
 type msOdataLists struct {
-	OdataContext  string               `json:"@odata.context"`
-	OdataNextlink string               `json:"@odata.nextLink,omitempty"`
-	Value         []msOdataListDetails `json:"value"`
+	OdataContext  string              `json:"@odata.context"`
+	OdataNextlink string              `json:"@odata.nextLink,omitempty"`
+	Value         []msDisplayNameItem `json:"value"`
 }
 
-type msOdataListDetails struct {
+type msDisplayNameItem struct {
 	ID          string `json:"id,omitempty"`
 	DisplayName string `json:"displayName"`
 }
@@ -220,7 +221,7 @@ func (msToDo *MSToDo) deleteObject(url string) error {
 
 func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, error) {
 	result := todoclient.ToDoParent{}
-	payload := msOdataListDetails{
+	payload := msDisplayNameItem{
 		DisplayName: parentName,
 	}
 
@@ -250,7 +251,7 @@ func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, er
 	// decode request
 	defer resp.Body.Close()
 	decoder := json.NewDecoder(resp.Body)
-	data := msOdataListDetails{}
+	data := msDisplayNameItem{}
 	err = decoder.Decode(&data)
 	if err != nil {
 		return result, fmt.Errorf("could not decode data :%v", err)
