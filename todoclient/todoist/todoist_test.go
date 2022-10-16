@@ -2,7 +2,7 @@ package todoist
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -96,7 +96,7 @@ func createMockClient(bodies ...string) *http.Client {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(bodies[i])),
+			Body: io.NopCloser(bytes.NewBufferString(bodies[i])),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
 		}
