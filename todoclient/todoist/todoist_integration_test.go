@@ -1,7 +1,6 @@
 package todoist
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -10,6 +9,8 @@ import (
 )
 
 func TestTodoistClient_Integration_GetAllTasks(t *testing.T) {
+	checkPrerequisites(t)
+
 	client := createClient()
 	tasks, err := client.GetAllTasks()
 
@@ -22,6 +23,8 @@ func TestTodoistClient_Integration_GetAllTasks(t *testing.T) {
 }
 
 func TestTodoistClient_Integration_CRUD(t *testing.T) {
+	checkPrerequisites(t)
+
 	client := createClient()
 	// test get parents
 	parents, err := client.GetAllParents()
@@ -61,16 +64,12 @@ func createClient() *TodoistClient {
 }
 
 // Skips integration test if requirements are not meet
-func TestMain(m *testing.M) {
+func checkPrerequisites(t *testing.T) {
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		log.Print("Test will be skipped in Github Context")
-		return
+		t.Skip("Test will be skipped in Github Context")
 	}
 
 	if os.Getenv("TODOIST_API_TOKEN") == "" {
-		log.Print("Test will be skipped in Github Context")
-		return
+		t.Skip("Test will be skipped in Github Context")
 	}
-
-	m.Run()
 }

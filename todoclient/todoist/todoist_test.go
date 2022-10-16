@@ -74,6 +74,45 @@ func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 	}
 }
 
+func TestTodoistClient_Create(t *testing.T) {
+	client := NewTodoistClient(createMockClient(demoTask))
+	task := todoclient.ToDoTask{
+		ID:           "5196276900",
+		Name:         "mockTitle",
+		DueDate:      time.Time{},
+		CreationTime: time.Now(),
+	}
+
+	task, err := client.CreateTask("2180393145", task)
+
+	if err != nil {
+		t.Errorf("error was not nil but '%v'", err)
+	}
+}
+
+func TestTodoistClient_GetAllParents(t *testing.T) {
+	client := NewTodoistClient(createMockClient(demoListProject))
+
+	parents, err := client.GetAllParents()
+
+	if err != nil {
+		t.Errorf("error was not nil but '%v'", err)
+	}
+	if len(parents) != 1 {
+		t.Errorf("expected %d parents but found %d", 1, len(parents))
+	}
+}
+
+func TestTodoistClient_Delete(t *testing.T) {
+	client := NewTodoistClient(createMockClient(""))
+
+	err := client.DeleteTask("2180393145", "task")
+
+	if err != nil {
+		t.Errorf("error was not nil but '%v'", err)
+	}
+}
+
 // RoundTripFunc .
 type RoundTripFunc func(req *http.Request) *http.Response
 
@@ -102,6 +141,29 @@ func createMockClient(bodies ...string) *http.Client {
 		}
 	})
 }
+
+const demoTask = `{
+	"id": "5207162814",
+	"assigner": "0",
+	"project_id": "2180393145",
+	"section_id": "0",
+	"order": "57",
+	"content": "stuff",
+	"description": "",
+	"is_completed": false,
+	"label_ids": [],
+	"priority": "1",
+	"comment_count": "0",
+	"creator": "16460291",
+	"created": "2021-10-02T18:57:07Z",
+	"due": {
+			"recurring": false,
+			"string": "Dec 1",
+			"date": "2021-12-01"
+	},
+	"url": "https://todoist.com/showTask?id=5207162814"
+},
+`
 
 const demoList = `[
 	{
