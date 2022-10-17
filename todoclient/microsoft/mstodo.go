@@ -168,7 +168,9 @@ func (msToDo *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (res
 	if err != nil {
 		return result, fmt.Errorf("could not decode data :%v", err)
 	}
-	result.DueDate, err = time.Parse(timeDueDateLayout, data.DueDateTime.DateTime)
+	if data.DueDateTime != nil {
+		result.DueDate, err = time.Parse(timeDueDateLayout, data.DueDateTime.DateTime)
+	}
 	if err != nil {
 		return result, fmt.Errorf("could not decode data :%v", err)
 	}
