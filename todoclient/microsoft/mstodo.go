@@ -101,25 +101,6 @@ func (msToDo *MSToDo) GetAllTasks() (tasks []todoclient.ToDoTask, err error) {
 	return result, nil
 }
 
-// Converts items to OData items to generic ToDoTasks and updates the internal cache
-func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (tasks []todoclient.ToDoTask) {
-	result := make([]todoclient.ToDoTask, 0)
-
-	for _, task := range tasksInList {
-		task.ListID = listId
-
-		result = append(result, todoclient.ToDoTask{
-			ID:           task.ID,
-			Name:         task.DisplayName,
-			Description:  task.BodyItem.Content,
-			DueDate:      task.DueDate,
-			CreationTime: task.CreationDate,
-		})
-	}
-
-	return result
-}
-
 func concertToMSToDoTask(input todoclient.ToDoTask) msOdataTask {
 	// create result
 	result := msOdataTask{
@@ -291,6 +272,25 @@ func (msToDo *MSToDo) GetChildrenTasks(parentId string) (tasks []todoclient.ToDo
 		return nil, err
 	}
 	return msToDo.processChildren(parentId, childerenTasks), nil
+}
+
+// Converts items to OData items to generic ToDoTasks and updates the internal cache
+func (msToDo *MSToDo) processChildren(listId string, tasksInList []msTask) (tasks []todoclient.ToDoTask) {
+	result := make([]todoclient.ToDoTask, 0)
+
+	for _, task := range tasksInList {
+		task.ListID = listId
+
+		result = append(result, todoclient.ToDoTask{
+			ID:           task.ID,
+			Name:         task.DisplayName,
+			Description:  task.BodyItem.Content,
+			DueDate:      task.DueDate,
+			CreationTime: task.CreationDate,
+		})
+	}
+
+	return result
 }
 
 func (msToDo *MSToDo) getChildrenMSTasks(parentId string) ([]msTask, error) {
