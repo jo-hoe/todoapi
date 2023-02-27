@@ -2,7 +2,7 @@ module github.com/jo-hoe/todoapi
 
 go 1.19
 
-require golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
+require golang.org/x/oauth2 v0.5.0
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
