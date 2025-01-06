@@ -2,4 +2,4 @@ module github.com/jo-hoe/todoapi
 
 go 1.19
 
-require golang.org/x/oauth2 v0.24.0
+require golang.org/x/oauth2 v0.25.0
