@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jo-hoe/todoapi/todoclient/common"
 	customhttp "github.com/jo-hoe/todoapi/http"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
@@ -74,7 +75,7 @@ func (client *TodoistClient) CreateTask(parentId string, task todoclient.ToDoTas
 	if resp.StatusCode != 200 {
 		return result, fmt.Errorf("%+v", resp.Status)
 	}
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	responseObject := TodoistTask{}
 	err = decoder.Decode(&responseObject)
@@ -137,7 +138,7 @@ func (client *TodoistClient) deleteObject(url string) error {
 		fmt.Println(err)
 		return err
 	}
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 
 	return err
 }
@@ -157,7 +158,7 @@ func (client *TodoistClient) CreateParent(parentName string) (todoclient.ToDoPar
 	if resp.StatusCode != 200 {
 		return result, fmt.Errorf("%+v", resp.Status)
 	}
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	responseObject := TodoistProject{}
 	err = decoder.Decode(&responseObject)
@@ -236,7 +237,7 @@ func (client *TodoistClient) getData(url string, data interface{}) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("did not get a 200 response but found: %s", resp.Status)
 	}
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&data)
 	if err != nil {

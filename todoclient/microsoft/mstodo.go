@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jo-hoe/todoapi/todoclient/common"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
@@ -161,7 +162,7 @@ func (msToDo *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (res
 	}
 
 	// decode request
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	data := msOdataTask{}
 	err = decoder.Decode(&data)
@@ -198,7 +199,12 @@ func (msToDo *MSToDo) deleteObject(url string) error {
 		}
 		return fmt.Errorf("received error: %+v", string(b))
 	}
-
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			fmt.Println("error closing response body:", err)
+		}
+	}()
 	return err
 }
 
@@ -232,7 +238,7 @@ func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, er
 	}
 
 	// decode request
-	defer resp.Body.Close()
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	data := msDisplayNameItem{}
 	err = decoder.Decode(&data)
@@ -355,7 +361,8 @@ func (msToDo *MSToDo) getData(url string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error after GET call:%s", err.Error())
 	}
-	defer resp.Body.Close()
+	// decode request
+	defer common.CloseBody(resp.Body)
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&data)
 	if err != nil {
