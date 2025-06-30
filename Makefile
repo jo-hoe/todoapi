@@ -14,3 +14,8 @@ lint-docker: ## Run linters
 lint: ## Run linters
 	@echo "Running linters..."
 	@golangci-lint run $(ROOT_DIR)/...
+
+.PHONY: test
+test: ## Run tests
+	@echo "Running tests..."
+	@go test -v -cover ./...
