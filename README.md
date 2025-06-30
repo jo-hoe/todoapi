@@ -8,7 +8,7 @@ API for todo applications.
 - [x] Todoist
 - [x] MS To Do
 
-## Required Secrets & Setup
+## Dev Setup
 
 This project requires API tokens/secrets for integration tests and running against real services. You can provide these via environment variables or `.env` files as described below.
 
@@ -38,6 +38,10 @@ This project requires API tokens/secrets for integration tests and running again
     MSCLIENTCREDENTIALS={"clientId": "your_client_id", "clientSecret": "your_client_secret"}
     MSTOKEN={"token_type": "Bearer", ...}
     ```
+
+## Makefile Usage
+
+The project provides a `Makefile` to simplify common development tasks. You can run `make help` (if your shell supports it) to see a summary of available targets and their descriptions.
 
 ## Linting
 
