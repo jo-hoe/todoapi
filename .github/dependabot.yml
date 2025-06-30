@@ -8,9 +8,18 @@ updates:
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
+      interval: monthly # See documentation for possible values
     allow:
       - dependency-type: "all"
     commit-message:
-      prefix: ":arrow_up:"
+      prefix: ":arrow_up: "
     open-pull-requests-limit: 50
+    commit-message:
+      # Prefix all commit messages with "[docker] " (no colon, but a trailing whitespace)
+      prefix: ":arrow_up: "
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ":arrow_up: "
