@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jo-hoe/todoapi/todoclient"
-	"github.com/jo-hoe/todoapi/todoclient/common"
+	"github.com/jo-hoe/todoapi/internal/common"
 )
 
 const (

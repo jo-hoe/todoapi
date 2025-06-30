@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jo-hoe/todoapi/todoclient/common"
-	customhttp "github.com/jo-hoe/todoapi/http"
+	"github.com/jo-hoe/todoapi/internal/common"
+	customhttp "github.com/jo-hoe/todoapi/internal/http"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
