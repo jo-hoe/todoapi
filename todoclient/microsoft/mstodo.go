@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jo-hoe/todoapi/todoclient/common"
 	"github.com/jo-hoe/todoapi/todoclient"
+	"github.com/jo-hoe/todoapi/todoclient/common"
 )
 
 const (
@@ -153,21 +153,13 @@ func (msToDo *MSToDo) CreateTask(parentId string, task todoclient.ToDoTask) (res
 	}
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := msToDo.client.Do(req)
-	if resp.StatusCode != 201 {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return result, err
-		}
-		return result, fmt.Errorf("received error: %+v", string(b))
-	}
-
-	// decode request
-	defer common.CloseBody(resp.Body)
-	decoder := json.NewDecoder(resp.Body)
-	data := msOdataTask{}
-	err = decoder.Decode(&data)
 	if err != nil {
-		return result, fmt.Errorf("could not decode data :%v", err)
+		return result, err
+	}
+	data := msOdataTask{}
+	err = decodeJSONResponse(resp, 201, &data)
+	if err != nil {
+		return result, err
 	}
 	if data.DueDateTime != nil {
 		result.DueDate, err = time.Parse(timeDueDateLayout, data.DueDateTime.DateTime)
@@ -199,12 +191,7 @@ func (msToDo *MSToDo) deleteObject(url string) error {
 		}
 		return fmt.Errorf("received error: %+v", string(b))
 	}
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			fmt.Println("error closing response body:", err)
-		}
-	}()
+	defer common.CloseBody(resp.Body)
 	return err
 }
 
@@ -229,21 +216,10 @@ func (msToDo *MSToDo) CreateParent(parentName string) (todoclient.ToDoParent, er
 	if err != nil {
 		return result, err
 	}
-	if resp.StatusCode != 201 {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return result, err
-		}
-		return result, fmt.Errorf("received error: %+v", string(b))
-	}
-
-	// decode request
-	defer common.CloseBody(resp.Body)
-	decoder := json.NewDecoder(resp.Body)
 	data := msDisplayNameItem{}
-	err = decoder.Decode(&data)
+	err = decodeJSONResponse(resp, 201, &data)
 	if err != nil {
-		return result, fmt.Errorf("could not decode data :%v", err)
+		return result, err
 	}
 
 	result.ID = data.ID
@@ -369,5 +345,24 @@ func (msToDo *MSToDo) getData(url string, data interface{}) error {
 		return fmt.Errorf("could not decode data :%v", err)
 	}
 
+	return nil
+}
+
+// decodeJSONResponse checks the response status, decodes JSON, and closes the body.
+func decodeJSONResponse(resp *http.Response, expectedStatus int, out interface{}) error {
+	defer common.CloseBody(resp.Body)
+	if resp.StatusCode != expectedStatus {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("received error: could not read body: %v", err)
+		}
+		return fmt.Errorf("received error: %+v", string(b))
+	}
+	if out != nil {
+		decoder := json.NewDecoder(resp.Body)
+		if err := decoder.Decode(out); err != nil {
+			return fmt.Errorf("could not decode data :%v", err)
+		}
+	}
 	return nil
 }
