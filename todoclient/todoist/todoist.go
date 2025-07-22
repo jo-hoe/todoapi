@@ -1,19 +1,25 @@
+// Package todoist provides Todoist API client implementation
 package todoist
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jo-hoe/todoapi/internal/common"
 	customhttp "github.com/jo-hoe/todoapi/internal/http"
+	"github.com/jo-hoe/todoapi/pkg/errors"
+	"github.com/jo-hoe/todoapi/pkg/logger"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
 type TodoistClient struct {
 	httpClient *http.Client
+	logger     *logger.Logger
 }
 
 type TodoistTask struct {
@@ -49,57 +55,73 @@ const (
 	timeDueDateLayout  = "2006-01-02"
 )
 
-// creates an http client with injects the REST API token for each request
-func NewTodoistHttpClient(token string) *http.Client {
-	return customhttp.NewHttpClientWithHeader("Authorization", "Bearer "+token)
+// NewTodoistHTTPClient creates an HTTP client with injected REST API token for each request
+func NewTodoistHTTPClient(token string) *http.Client {
+	return customhttp.NewHTTPClientWithHeader("Authorization", "Bearer "+token)
 }
 
 func NewTodoistClient(httpClient *http.Client) *TodoistClient {
-	client := &TodoistClient{
+	return &TodoistClient{
 		httpClient: httpClient,
+		logger:     logger.New(),
 	}
-	return client
 }
 
-func (client *TodoistClient) CreateTask(parentId string, task todoclient.ToDoTask) (tasks todoclient.ToDoTask, err error) {
-	result := todoclient.ToDoTask{}
+func (client *TodoistClient) CreateTask(ctx context.Context, parentID string, task todoclient.ToDoTask) (todoclient.ToDoTask, error) {
+	var result todoclient.ToDoTask
+
+	if err := task.Validate(); err != nil {
+		return result, err
+	}
+
 	payload, err := convertTodoistTask(task)
 	if err != nil {
-		return result, err
+		return result, errors.NewAPIError("TODOIST_CONVERT_FAILED", "failed to convert task", err)
 	}
-	payload.ProjectID = parentId
+	payload.ProjectID = parentID
 
-	// create task
-	jsonPayload, _ := json.Marshal(payload)
-	resp, err := client.httpClient.Post(todoistTasksUrl, "application/json", bytes.NewBuffer(jsonPayload))
-	if resp.StatusCode != 200 {
-		return result, fmt.Errorf("%+v", resp.Status)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return result, errors.NewAPIError("TODOIST_MARSHAL_FAILED", "failed to marshal task", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, todoistTasksUrl, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, errors.NewAPIError("TODOIST_REQUEST_FAILED", "failed to create request", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return result, errors.NewAPIError("TODOIST_HTTP_FAILED", "HTTP request failed", err)
 	}
 	defer common.CloseBody(resp.Body)
-	decoder := json.NewDecoder(resp.Body)
-	responseObject := TodoistTask{}
-	err = decoder.Decode(&responseObject)
-	if err != nil {
-		return result, fmt.Errorf("could not decode data :%v", err)
+
+	if resp.StatusCode != http.StatusOK {
+		return result, errors.NewAPIError("TODOIST_CREATE_FAILED", fmt.Sprintf("create failed with status %d", resp.StatusCode), nil)
 	}
 
-	// convert task
-	temp, err := client.convertToToDoTask(responseObject)
+	var responseObject TodoistTask
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&responseObject); err != nil {
+		return result, errors.NewAPIError("TODOIST_DECODE_FAILED", "failed to decode response", err)
+	}
+
+	convertedTask, err := client.convertToToDoTask(ctx, responseObject)
 	if err != nil {
 		return result, err
 	}
 
-	return *temp, err
+	return *convertedTask, nil
 }
 
-func (client *TodoistClient) getComments(taskId string) ([]string, error) {
-	comments := make([]TodoistComment, 0)
-	err := client.getData(fmt.Sprintf(todoistCommentsUrl, taskId), &comments)
-	if err != nil {
+func (client *TodoistClient) getComments(ctx context.Context, taskID string) ([]string, error) {
+	var comments []TodoistComment
+	if err := client.getData(ctx, fmt.Sprintf(todoistCommentsUrl, taskID), &comments); err != nil {
 		return nil, err
 	}
 
-	result := make([]string, 0)
+	result := make([]string, 0, len(comments))
 	for _, comment := range comments {
 		result = append(result, comment.Content)
 	}
@@ -107,87 +129,124 @@ func (client *TodoistClient) getComments(taskId string) ([]string, error) {
 	return result, nil
 }
 
-func (client *TodoistClient) UpdateTask(parentId string, task todoclient.ToDoTask) error {
+func (client *TodoistClient) UpdateTask(ctx context.Context, parentID string, task todoclient.ToDoTask) error {
+	if err := task.Validate(); err != nil {
+		return err
+	}
+
 	payload, err := convertTodoistTask(task)
 	if err != nil {
-		return err
+		return errors.NewAPIError("TODOIST_CONVERT_FAILED", "failed to convert task", err)
 	}
 
-	jsonPayload, _ := json.Marshal(payload)
-	resp, err := client.httpClient.Post(fmt.Sprintf(todoistTaskUrl, task.ID), "application/json", bytes.NewBuffer(jsonPayload))
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("%+v", resp.Status)
-	}
-
-	return err
-}
-
-func (client *TodoistClient) DeleteTask(parentId string, taskId string) error {
-	return client.deleteObject(fmt.Sprintf(todoistTaskUrl, taskId))
-}
-
-func (client *TodoistClient) deleteObject(url string) error {
-	req, err := http.NewRequest("DELETE", url, nil)
+	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return errors.NewAPIError("TODOIST_MARSHAL_FAILED", "failed to marshal task", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(todoistTaskUrl, task.ID), bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return errors.NewAPIError("TODOIST_REQUEST_FAILED", "failed to create request", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return errors.NewAPIError("TODOIST_HTTP_FAILED", "HTTP request failed", err)
+	}
+	defer common.CloseBody(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.NewAPIError("TODOIST_UPDATE_FAILED", fmt.Sprintf("update failed with status %d", resp.StatusCode), nil)
+	}
+
+	return nil
+}
+
+func (client *TodoistClient) DeleteTask(ctx context.Context, parentID, taskID string) error {
+	return client.deleteObject(ctx, fmt.Sprintf(todoistTaskUrl, taskID))
+}
+
+func (client *TodoistClient) deleteObject(ctx context.Context, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return errors.NewAPIError("TODOIST_REQUEST_FAILED", "failed to create delete request", err)
 	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return errors.NewAPIError("TODOIST_HTTP_FAILED", "HTTP delete request failed", err)
 	}
 	defer common.CloseBody(resp.Body)
 
-	return err
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return errors.NewAPIError("TODOIST_DELETE_FAILED", fmt.Sprintf("delete failed with status %d", resp.StatusCode), nil)
+	}
+
+	return nil
 }
 
-func (client *TodoistClient) CreateParent(parentName string) (todoclient.ToDoParent, error) {
-	result := todoclient.ToDoParent{}
+func (client *TodoistClient) CreateParent(ctx context.Context, parentName string) (todoclient.ToDoParent, error) {
+	var result todoclient.ToDoParent
+
+	parentName = strings.TrimSpace(parentName)
+	if parentName == "" {
+		return result, errors.NewValidationError("name", "parent name cannot be empty")
+	}
+
 	payload := TodoistProject{
 		Name: parentName,
 	}
 
-	// create task
-	jsonPayload, _ := json.Marshal(payload)
-	resp, err := client.httpClient.Post(todoistParentsUrl, "application/json", bytes.NewBuffer(jsonPayload))
+	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		return result, fmt.Errorf("could not decode data :%v", err)
+		return result, errors.NewAPIError("TODOIST_MARSHAL_FAILED", "failed to marshal parent", err)
 	}
-	if resp.StatusCode != 200 {
-		return result, fmt.Errorf("%+v", resp.Status)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, todoistParentsUrl, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return result, errors.NewAPIError("TODOIST_REQUEST_FAILED", "failed to create request", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return result, errors.NewAPIError("TODOIST_HTTP_FAILED", "HTTP request failed", err)
 	}
 	defer common.CloseBody(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return result, errors.NewAPIError("TODOIST_CREATE_PARENT_FAILED", fmt.Sprintf("create parent failed with status %d", resp.StatusCode), nil)
+	}
+
+	var responseObject TodoistProject
 	decoder := json.NewDecoder(resp.Body)
-	responseObject := TodoistProject{}
-	err = decoder.Decode(&responseObject)
-	if err != nil {
-		return result, fmt.Errorf("could not decode data :%v", err)
+	if err := decoder.Decode(&responseObject); err != nil {
+		return result, errors.NewAPIError("TODOIST_DECODE_FAILED", "failed to decode response", err)
 	}
 
 	result.ID = responseObject.ID
 	result.Name = responseObject.Name
 
-	return result, err
+	return result, nil
 }
 
-func (client *TodoistClient) DeleteParent(parentId string) error {
-	return client.deleteObject(fmt.Sprintf(todoistParentUrl, parentId))
+func (client *TodoistClient) DeleteParent(ctx context.Context, parentID string) error {
+	return client.deleteObject(ctx, fmt.Sprintf(todoistParentUrl, parentID))
 }
 
-func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {
+func (client *TodoistClient) GetAllParents(ctx context.Context) ([]todoclient.ToDoParent, error) {
 	result := make([]todoclient.ToDoParent, 0)
-	projects := make([]TodoistProject, 0)
+	var projects []TodoistProject
 
-	err := client.getData(todoistParentsUrl, &projects)
-	if err != nil {
-		return result, err
+	if err := client.getData(ctx, todoistParentsUrl, &projects); err != nil {
+		client.logger.WithError(err).Error("failed to get all parents")
+		return result, errors.NewAPIError("TODOIST_GET_PARENTS_FAILED", "failed to retrieve parents", err)
 	}
 
 	for _, project := range projects {
 		parent := todoclient.ToDoParent{
-			ID:   fmt.Sprint(project.ID),
+			ID:   project.ID,
 			Name: project.Name,
 		}
 		result = append(result, parent)
@@ -196,30 +255,30 @@ func (client *TodoistClient) GetAllParents() ([]todoclient.ToDoParent, error) {
 	return result, nil
 }
 
-func (client *TodoistClient) GetAllTasks() (tasks []todoclient.ToDoTask, err error) {
-	return client.getTasks(nil)
+func (client *TodoistClient) GetAllTasks(ctx context.Context) ([]todoclient.ToDoTask, error) {
+	return client.getTasks(ctx, nil)
 }
 
-func (client *TodoistClient) GetChildrenTasks(parentId string) (tasks []todoclient.ToDoTask, err error) {
-	return client.getTasks(&parentId)
+func (client *TodoistClient) GetChildrenTasks(ctx context.Context, parentID string) ([]todoclient.ToDoTask, error) {
+	return client.getTasks(ctx, &parentID)
 }
 
-func (client *TodoistClient) getTasks(parentId *string) (tasks []todoclient.ToDoTask, err error) {
-	todoistTasks := make([]TodoistTask, 0)
+func (client *TodoistClient) getTasks(ctx context.Context, parentID *string) ([]todoclient.ToDoTask, error) {
+	var todoistTasks []TodoistTask
 
 	url := todoistTasksUrl
-	if parentId != nil {
-		url = url + "?project_id=" + *parentId
+	if parentID != nil {
+		url = url + "?project_id=" + *parentID
 	}
 
-	err = client.getData(url, &todoistTasks)
-	if err != nil {
-		return nil, err
+	if err := client.getData(ctx, url, &todoistTasks); err != nil {
+		client.logger.WithError(err).Error("failed to get tasks")
+		return nil, errors.NewAPIError("TODOIST_GET_TASKS_FAILED", "failed to retrieve tasks", err)
 	}
 
-	tasks = make([]todoclient.ToDoTask, 0)
+	tasks := make([]todoclient.ToDoTask, 0, len(todoistTasks))
 	for _, task := range todoistTasks {
-		convertedTask, err := client.convertToToDoTask(task)
+		convertedTask, err := client.convertToToDoTask(ctx, task)
 		if err != nil {
 			return nil, err
 		}
@@ -229,32 +288,35 @@ func (client *TodoistClient) getTasks(parentId *string) (tasks []todoclient.ToDo
 	return tasks, nil
 }
 
-func (client *TodoistClient) getData(url string, data interface{}) error {
-	resp, err := client.httpClient.Get(url)
+func (client *TodoistClient) getData(ctx context.Context, url string, data interface{}) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("error after GET call:%s", err.Error())
+		return errors.NewAPIError("TODOIST_REQUEST_FAILED", "failed to create GET request", err)
 	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("did not get a 200 response but found: %s", resp.Status)
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return errors.NewAPIError("TODOIST_HTTP_FAILED", "HTTP GET request failed", err)
 	}
 	defer common.CloseBody(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.NewAPIError("TODOIST_GET_FAILED", fmt.Sprintf("GET failed with status %d", resp.StatusCode), nil)
+	}
+
 	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&data)
-	if err != nil {
-		return fmt.Errorf("could not decode data :%v", err)
+	if err := decoder.Decode(data); err != nil {
+		return errors.NewAPIError("TODOIST_DECODE_FAILED", "failed to decode response data", err)
 	}
 
 	return nil
 }
 
-func (client *TodoistClient) convertToToDoTask(task TodoistTask) (*todoclient.ToDoTask, error) {
+func (client *TodoistClient) convertToToDoTask(ctx context.Context, task TodoistTask) (*todoclient.ToDoTask, error) {
 	dueDate := time.Time{}
 	if task.Due != nil {
-		deserializedTime, err := time.Parse(timeDueDateLayout, task.Due.Date)
-		if err == nil {
+		if deserializedTime, err := time.Parse(timeDueDateLayout, task.Due.Date); err == nil {
 			dueDate = deserializedTime
-		} else {
-			dueDate = time.Time{}
 		}
 	}
 
@@ -267,8 +329,10 @@ func (client *TodoistClient) convertToToDoTask(task TodoistTask) (*todoclient.To
 	}
 
 	if task.CommentCount > 0 {
-		comments, err := client.getComments(task.ID)
+		comments, err := client.getComments(ctx, task.ID)
 		if err != nil {
+			// Log error but don't fail the conversion
+			client.logger.WithError(err).WithField("taskId", task.ID).Warn("failed to get comments for task")
 			return &result, nil
 		}
 		for _, comment := range comments {
@@ -282,7 +346,7 @@ func (client *TodoistClient) convertToToDoTask(task TodoistTask) (*todoclient.To
 	return &result, nil
 }
 
-// converts but does not convert creation date
+// convertTodoistTask converts a ToDoTask to TodoistTask format
 func convertTodoistTask(task todoclient.ToDoTask) (*TodoistTask, error) {
 	result := TodoistTask{
 		ID:          task.ID,
@@ -290,7 +354,7 @@ func convertTodoistTask(task todoclient.ToDoTask) (*TodoistTask, error) {
 		Description: task.Description,
 	}
 
-	if !task.CreationTime.IsZero() {
+	if !task.DueDate.IsZero() {
 		result.Due = &TodoistDue{
 			Date: task.DueDate.Format(timeDueDateLayout),
 		}

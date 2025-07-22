@@ -2,6 +2,7 @@ package microsoft
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -33,10 +34,11 @@ func TestTodoistClient_ImplementationTest(t *testing.T) {
 
 func TestMSToDo_GetAllTask(t *testing.T) {
 	client := createMockClient()
+	ctx := context.Background()
 
 	api := NewMSToDo(client)
 
-	tasks, err := api.GetAllTasks()
+	tasks, err := api.GetAllTasks(ctx)
 	if len(tasks) != 6 {
 		t.Errorf("Expected 6 but found %d tasks", len(tasks))
 	}
@@ -47,10 +49,11 @@ func TestMSToDo_GetAllTask(t *testing.T) {
 
 func TestMSToDo_GetChildrenTasks(t *testing.T) {
 	client := createMockClient()
+	ctx := context.Background()
 
 	api := NewMSToDo(client)
 
-	tasks, err := api.GetChildrenTasks("xyz")
+	tasks, err := api.GetChildrenTasks(ctx, "xyz")
 	if len(tasks) != 3 {
 		t.Errorf("Expected 3 but found %d tasks", len(tasks))
 	}
@@ -61,10 +64,11 @@ func TestMSToDo_GetChildrenTasks(t *testing.T) {
 
 func TestMSToDo_GetAllTask_CheckSerialization(t *testing.T) {
 	client := createMockClient()
+	ctx := context.Background()
 	testTime := time.Date(1990, time.Month(1), 1, 1, 1, 0, 0, time.UTC)
 	api := NewMSToDo(client)
 
-	tasks, err := api.GetAllTasks()
+	tasks, err := api.GetAllTasks(ctx)
 
 	task := tasks[0]
 
@@ -87,10 +91,11 @@ func TestMSToDo_GetAllTask_CheckSerialization(t *testing.T) {
 
 func TestMSToDo_UpdateTask(t *testing.T) {
 	client := createMockClient()
+	ctx := context.Background()
 
 	api := NewMSToDo(client)
 
-	err := api.UpdateTask("demo", todoclient.ToDoTask{
+	err := api.UpdateTask(ctx, "demo", todoclient.ToDoTask{
 		ID:      "atask",
 		Name:    "test",
 		DueDate: time.Now(),

@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -10,8 +11,9 @@ import (
 
 func IntegrationTest_GetAllTasks(t *testing.T, client todoclient.ToDoClient) {
 	checkPrerequisites(t)
+	ctx := context.Background()
 
-	tasks, err := client.GetAllTasks()
+	tasks, err := client.GetAllTasks(ctx)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -23,8 +25,9 @@ func IntegrationTest_GetAllTasks(t *testing.T, client todoclient.ToDoClient) {
 
 func IntegrationTest_Parents(t *testing.T, client todoclient.ToDoClient) {
 	checkPrerequisites(t)
+	ctx := context.Background()
 
-	parent, err := client.CreateParent("test")
+	parent, err := client.CreateParent(ctx, "test")
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
 	}
@@ -32,7 +35,7 @@ func IntegrationTest_Parents(t *testing.T, client todoclient.ToDoClient) {
 		t.Error("expected more than 0 tasks")
 	}
 
-	err = client.DeleteParent(parent.ID)
+	err = client.DeleteParent(ctx, parent.ID)
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
 	}
@@ -40,9 +43,10 @@ func IntegrationTest_Parents(t *testing.T, client todoclient.ToDoClient) {
 
 func IntegrationTest_CRUD(t *testing.T, client todoclient.ToDoClient) {
 	checkPrerequisites(t)
+	ctx := context.Background()
 
 	// test get parents
-	parents, err := client.GetAllParents()
+	parents, err := client.GetAllParents(ctx)
 	if err != nil {
 		t.Errorf("could not get parents '%v'", err)
 	}
@@ -51,7 +55,7 @@ func IntegrationTest_CRUD(t *testing.T, client todoclient.ToDoClient) {
 	}
 
 	// test create
-	task, err := client.CreateTask(parents[0].ID, todoclient.ToDoTask{
+	task, err := client.CreateTask(ctx, parents[0].ID, todoclient.ToDoTask{
 		Name:        "test",
 		DueDate:     time.Now(),
 		Description: "test test test",
@@ -62,13 +66,13 @@ func IntegrationTest_CRUD(t *testing.T, client todoclient.ToDoClient) {
 
 	// test update
 	task.Name = "testUpdate"
-	err = client.UpdateTask(parents[0].ID, task)
+	err = client.UpdateTask(ctx, parents[0].ID, task)
 	if err != nil {
 		t.Errorf("issue updating task '%v'", err)
 	}
 
 	// test delete
-	err = client.DeleteTask(parents[0].ID, task.ID)
+	err = client.DeleteTask(ctx, parents[0].ID, task.ID)
 	if err != nil {
 		t.Errorf("issue updating task '%v'", err)
 	}

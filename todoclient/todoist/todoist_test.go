@@ -2,6 +2,7 @@ package todoist
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -17,8 +18,9 @@ func TestTodoistClient_ImplementationTest(t *testing.T) {
 
 func TestTodoistClient_GetAllTasks(t *testing.T) {
 	client := NewTodoistClient(createMockClient(demoList))
+	ctx := context.Background()
 
-	tasks, err := client.GetAllTasks()
+	tasks, err := client.GetAllTasks(ctx)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -31,8 +33,9 @@ func TestTodoistClient_GetAllTasks(t *testing.T) {
 func TestTodoistClient_GetChildrenTasks(t *testing.T) {
 	mockProjectId := "2180393141"
 	client := NewTodoistClient(createMockClient(demoListProject))
+	ctx := context.Background()
 
-	tasks, err := client.GetChildrenTasks(mockProjectId)
+	tasks, err := client.GetChildrenTasks(ctx, mockProjectId)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -44,6 +47,7 @@ func TestTodoistClient_GetChildrenTasks(t *testing.T) {
 
 func TestTodoistClient_UpdateTask(t *testing.T) {
 	client := NewTodoistClient(createMockClient(demoListProject))
+	ctx := context.Background()
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
 		Name:         "mockTitle",
@@ -51,7 +55,7 @@ func TestTodoistClient_UpdateTask(t *testing.T) {
 		CreationTime: time.Now(),
 	}
 
-	err := client.UpdateTask("2180393145", task)
+	err := client.UpdateTask(ctx, "2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -60,6 +64,7 @@ func TestTodoistClient_UpdateTask(t *testing.T) {
 
 func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 	client := NewTodoistClient(createMockClient(demoListProject))
+	ctx := context.Background()
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
 		Name:         "mockTitle",
@@ -67,7 +72,7 @@ func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 		CreationTime: time.Now(),
 	}
 
-	err := client.UpdateTask("2180393145", task)
+	err := client.UpdateTask(ctx, "2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -76,6 +81,7 @@ func TestTodoistClient_UpdateTask_Without_CreationTime(t *testing.T) {
 
 func TestTodoistClient_Create(t *testing.T) {
 	client := NewTodoistClient(createMockClient(demoTask))
+	ctx := context.Background()
 	task := todoclient.ToDoTask{
 		ID:           "5196276900",
 		Name:         "mockTitle",
@@ -83,7 +89,7 @@ func TestTodoistClient_Create(t *testing.T) {
 		CreationTime: time.Now(),
 	}
 
-	_, err := client.CreateTask("2180393145", task)
+	_, err := client.CreateTask(ctx, "2180393145", task)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -92,8 +98,9 @@ func TestTodoistClient_Create(t *testing.T) {
 
 func TestTodoistClient_GetAllParents(t *testing.T) {
 	client := NewTodoistClient(createMockClient(demoListProject))
+	ctx := context.Background()
 
-	parents, err := client.GetAllParents()
+	parents, err := client.GetAllParents(ctx)
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -105,8 +112,9 @@ func TestTodoistClient_GetAllParents(t *testing.T) {
 
 func TestTodoistClient_Delete(t *testing.T) {
 	client := NewTodoistClient(createMockClient(""))
+	ctx := context.Background()
 
-	err := client.DeleteTask("2180393145", "task")
+	err := client.DeleteTask(ctx, "2180393145", "task")
 
 	if err != nil {
 		t.Errorf("error was not nil but '%v'", err)
@@ -240,9 +248,9 @@ const demoListProject = `[
 	}
 ]`
 
-func Test_NewTodoistHttpClient(t *testing.T) {
+func Test_NewTodoistHTTPClient(t *testing.T) {
 	var token = "dummyToken"
-	client := NewTodoistHttpClient(token)
+	client := NewTodoistHTTPClient(token)
 
 	if client.Transport == nil {
 		t.Error("client.Transport was nil")

@@ -1,74 +1,172 @@
 # TodoAPI
 
-[![Test Status](https://github.com/jo-hoe/todoapi/workflows/test/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=test)
-[![Lint Status](https://github.com/jo-hoe/todoapi/workflows/lint/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=lint)
+[![CI](https://github.com/jo-hoe/todoapi/workflows/CI/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=CI)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jo-hoe/todoapi)](https://goreportcard.com/report/github.com/jo-hoe/todoapi)
+[![codecov](https://codecov.io/gh/jo-hoe/todoapi/branch/main/graph/badge.svg)](https://codecov.io/gh/jo-hoe/todoapi)
 
-API for todo applications.
+A unified API for todo applications with support for multiple providers including Todoist and Microsoft To Do.
 
-- [x] Todoist
-- [x] MS To Do
+## Features
 
-## Dev Setup
+- ✅ **Multi-provider support**: Todoist and Microsoft To Do
+- ✅ **Unified interface**: Consistent API across different todo services
 
-This project requires API tokens/secrets for integration tests and running against real services. You can provide these via environment variables or `.env` files as described below.
+## Quick Start
 
-### Todoist
+### Prerequisites
 
-- **Token:** Obtain your Todoist API token from your [Todoist Integrations Settings](https://todoist.com/prefs/integrations).
-- **Usage:**
-  - Set the environment variable `TODOIST_API_TOKEN` with your token value.
-  - Or, create a `.env` file in `todoclient/todoist/` with:
+- Go 1.24 or later
+- Docker (optional)
+- API tokens for the services you want to use
 
-    ```env
-    TODOIST_API_TOKEN=your_token_here
-    ```
+### Configuration
 
-### Microsoft To Do
+The application uses environment variables for configuration:
 
-- **Client Credentials & Token:**
-  - Register an application in the [Azure Portal](https://portal.azure.com/) to obtain your `clientId` and `clientSecret`.
-  - Obtain an OAuth token for Microsoft Graph with the required scopes (`openid offline_access tasks.readwrite`).
-- **Usage:**
-  - Set the environment variables:
-    - `MSCLIENTCREDENTIALS` (JSON: `{ "clientId": "...", "clientSecret": "..." }`)
-    - `MSTOKEN` (JSON: `{ "token_type": "Bearer", ... }`)
-  - Or, create a `.env` file in `todoclient/microsoft/` with:
+#### Server Configuration
+- `PORT`: Server port (default: 8080)
+- `READ_TIMEOUT`: HTTP read timeout (default: 30s)
+- `WRITE_TIMEOUT`: HTTP write timeout (default: 30s)
+- `IDLE_TIMEOUT`: HTTP idle timeout (default: 60s)
 
-    ```env
-    MSCLIENTCREDENTIALS={"clientId": "your_client_id", "clientSecret": "your_client_secret"}
-    MSTOKEN={"token_type": "Bearer", ...}
-    ```
+#### Todoist Configuration
+- `TODOIST_API_TOKEN`: Your Todoist API token
+- `TODOIST_BASE_URL`: Todoist API base URL (default: https://api.todoist.com/rest/v2/)
 
-## Makefile Usage
+#### Microsoft To Do Configuration
+- `MS_CLIENT_ID`: Microsoft application client ID
+- `MS_CLIENT_SECRET`: Microsoft application client secret
+- `MS_TENANT_ID`: Microsoft tenant ID
+- `MS_BASE_URL`: Microsoft Graph API base URL (default: https://graph.microsoft.com/v1.0/me/todo/)
 
-The project provides a `Makefile` to simplify common development tasks. You can run `make help` (if your shell supports it) to see a summary of available targets and their descriptions.
+#### Logging Configuration
+- `LOG_LEVEL`: Logging level (default: info)
+- `LOG_FORMAT`: Log format - json or text (default: text)
+- `ENV`: Environment - production for JSON logging (default: development)
 
-## Linting
+## API Usage
 
-Project used `golangci-lint` for linting.
+### Basic Example
 
-### Installation
+```go
+package main
 
-<https://golangci-lint.run/usage/install/>
+import (
+    "context"
+    "fmt"
+    "log"
+    "net/http"
 
-### Execution
+    "github.com/jo-hoe/todoapi/todoclient"
+    "github.com/jo-hoe/todoapi/todoclient/todoist"
+    customhttp "github.com/jo-hoe/todoapi/internal/http"
+)
 
-Run the linting locally by executing
-
-```cli
-golangci-lint run ./...
+func main() {
+    // Create HTTP client with authentication
+    httpClient := todoist.NewTodoistHTTPClient("your-api-token")
+    
+    // Create Todoist client
+    client := todoist.NewTodoistClient(httpClient)
+    
+    ctx := context.Background()
+    
+    // Get all tasks
+    tasks, err := client.GetAllTasks(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("Found %d tasks\n", len(tasks))
+    
+    // Create a new task
+    newTask := todoclient.ToDoTask{
+        Name:        "Learn Go",
+        Description: "Study Go programming language",
+    }
+    
+    // Get first project/parent
+    parents, err := client.GetAllParents(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    if len(parents) > 0 {
+        createdTask, err := client.CreateTask(ctx, parents[0].ID, newTask)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("Created task: %s\n", createdTask.Name)
+    }
+}
 ```
 
-in the working directory
+### Microsoft To Do Example
 
-## Testing
+```go
+package main
 
-The project contains both unit and integrations tests.
+import (
+    "context"
+    "log"
+    
+    "github.com/jo-hoe/todoapi/todoclient/microsoft"
+    "golang.org/x/oauth2"
+)
 
-### Unit Test Execution
-
-The unit test can be excuted using the default golang commands. To run all test execute the following in the parent folder of the repository.
-
-```powershell
-go test ./...
+func main() {
+    // Configure OAuth2
+    config := &oauth2.Config{
+        ClientID:     "your-client-id",
+        ClientSecret: "your-client-secret",
+        Endpoint: oauth2.Endpoint{
+            AuthURL:  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+            TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        },
+        Scopes: []string{"https://graph.microsoft.com/Tasks.ReadWrite"},
+    }
+    
+    // Get token (implement OAuth2 flow)
+    token := &oauth2.Token{AccessToken: "your-access-token"}
+    httpClient := config.Client(context.Background(), token)
+    
+    // Create Microsoft To Do client
+    client := microsoft.NewMSToDo(httpClient)
+    
+    ctx := context.Background()
+    
+    // Get all tasks
+    tasks, err := client.GetAllTasks(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    log.Printf("Found %d tasks", len(tasks))
+}
 ```
+
+
+### API Credentials Setup
+
+#### Todoist
+
+1. Go to [Todoist Integrations Settings](https://todoist.com/prefs/integrations)
+2. Create a new app or use an existing one
+3. Copy the API token
+4. Set the environment variable: `export TODOIST_API_TOKEN=your_token_here`
+
+#### Microsoft To Do
+
+1. Register an application in the [Azure Portal](https://portal.azure.com/)
+2. Configure the required permissions for Microsoft Graph API
+3. Obtain client credentials and implement OAuth2 flow
+4. Set the environment variables:
+   ```bash
+   export MS_CLIENT_ID=your_client_id
+   export MS_CLIENT_SECRET=your_client_secret
+   export MS_TENANT_ID=your_tenant_id
+   ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

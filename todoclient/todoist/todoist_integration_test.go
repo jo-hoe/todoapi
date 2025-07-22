@@ -25,6 +25,6 @@ func createClient(t *testing.T) *TodoistClient {
 		t.Skip("Test will be skipped in Github Context")
 	}
 
-	httpClient := NewTodoistHttpClient(token)
+	httpClient := NewTodoistHTTPClient(token)
 	return NewTodoistClient(httpClient)
 }
