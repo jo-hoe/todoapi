@@ -2,8 +2,8 @@
 
 [![Test](https://github.com/jo-hoe/todoapi/workflows/test/badge.svg)](https://github.com/jo-hoe/todoapi/actions/workflows/test.yml)
 [![Lint](https://github.com/jo-hoe/todoapi/workflows/lint/badge.svg)](https://github.com/jo-hoe/todoapi/actions/workflows/lint.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jo-hoe/todoapi/badge.svg?branch=main)](https://coveralls.io/github/jo-hoe/todoapi?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jo-hoe/todoapi)](https://goreportcard.com/report/github.com/jo-hoe/todoapi)
-[![codecov](https://codecov.io/gh/jo-hoe/todoapi/branch/main/graph/badge.svg)](https://codecov.io/gh/jo-hoe/todoapi)
 
 A unified API for todo applications with support for multiple providers including Todoist and Microsoft To Do.
 

@@ -30,11 +30,8 @@ func (m *MockToDoClient) GetAllTasks(ctx context.Context) ([]todoclient.ToDoTask
 }
 
 func (m *MockToDoClient) GetChildrenTasks(ctx context.Context, parentID string) ([]todoclient.ToDoTask, error) {
-	var result []todoclient.ToDoTask
-	for _, task := range m.tasks {
-		// In a real implementation, you'd have a parent ID field in the task
-		result = append(result, task)
-	}
+	// In a real implementation, you'd filter tasks by parent ID
+	result := append([]todoclient.ToDoTask(nil), m.tasks...)
 	return result, nil
 }
 

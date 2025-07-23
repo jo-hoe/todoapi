@@ -74,14 +74,14 @@ func createHandler(cfg *config.Config) http.Handler {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok","version":"%s","build_time":"%s"}`, Version, BuildTime)
+		_, _ = fmt.Fprintf(w, `{"status":"ok","version":"%s","build_time":"%s"}`, Version, BuildTime)
 	})
 
 	// Root endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"message":"TodoAPI","version":"%s"}`, Version)
+		_, _ = fmt.Fprintf(w, `{"message":"TodoAPI","version":"%s"}`, Version)
 	})
 
 	return mux
