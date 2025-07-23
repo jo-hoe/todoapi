@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jo-hoe/todoapi/internal/common"
 	"github.com/jo-hoe/todoapi/pkg/errors"
-	"github.com/jo-hoe/todoapi/pkg/logger"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
@@ -32,7 +32,6 @@ const (
 // https://learn.microsoft.com/en-us/graph/api/resources/todo-overview?view=graph-rest-1.0
 type MSToDo struct {
 	client *http.Client
-	logger *logger.Logger
 }
 
 type msTask struct {
@@ -82,7 +81,6 @@ type msOdataDateTime struct {
 func NewMSToDo(client *http.Client) *MSToDo {
 	return &MSToDo{
 		client: client,
-		logger: logger.New(),
 	}
 }
 
@@ -90,7 +88,7 @@ func NewMSToDo(client *http.Client) *MSToDo {
 func (msToDo *MSToDo) GetAllTasks(ctx context.Context) ([]todoclient.ToDoTask, error) {
 	taskLists, err := msToDo.getTaskLists(ctx)
 	if err != nil {
-		msToDo.logger.WithError(err).Error("failed to get task lists")
+		log.Printf("failed to get task lists: %v", err)
 		return nil, errors.NewAPIError("MS_GET_LISTS_FAILED", "failed to retrieve task lists", err)
 	}
 
@@ -99,7 +97,7 @@ func (msToDo *MSToDo) GetAllTasks(ctx context.Context) ([]todoclient.ToDoTask, e
 	for _, taskList := range taskLists.Value {
 		tasksInList, err := msToDo.getChildrenMSTasks(ctx, taskList.ID)
 		if err != nil {
-			msToDo.logger.WithError(err).WithField("listId", taskList.ID).Error("failed to get tasks for list")
+			log.Printf("failed to get tasks for list %s: %v", taskList.ID, err)
 			return nil, errors.NewAPIError("MS_GET_TASKS_FAILED", "failed to retrieve tasks for list", err)
 		}
 		msTasks := msToDo.processChildren(taskList.ID, tasksInList)
@@ -282,7 +280,7 @@ func (msToDo *MSToDo) GetAllParents(ctx context.Context) ([]todoclient.ToDoParen
 
 	lists, err := msToDo.getTaskLists(ctx)
 	if err != nil {
-		msToDo.logger.WithError(err).Error("failed to get task lists")
+		log.Printf("failed to get task lists: %v", err)
 		return result, errors.NewAPIError("MS_GET_LISTS_FAILED", "failed to retrieve task lists", err)
 	}
 
@@ -299,7 +297,7 @@ func (msToDo *MSToDo) GetAllParents(ctx context.Context) ([]todoclient.ToDoParen
 func (msToDo *MSToDo) GetChildrenTasks(ctx context.Context, parentID string) ([]todoclient.ToDoTask, error) {
 	childrenTasks, err := msToDo.getChildrenMSTasks(ctx, parentID)
 	if err != nil {
-		msToDo.logger.WithError(err).WithField("parentId", parentID).Error("failed to get children tasks")
+		log.Printf("failed to get children tasks for parent %s: %v", parentID, err)
 		return nil, errors.NewAPIError("MS_GET_CHILDREN_FAILED", "failed to retrieve children tasks", err)
 	}
 	return msToDo.processChildren(parentID, childrenTasks), nil

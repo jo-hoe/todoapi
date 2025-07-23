@@ -1,6 +1,7 @@
 # TodoAPI
 
-[![CI](https://github.com/jo-hoe/todoapi/workflows/CI/badge.svg)](https://github.com/jo-hoe/todoapi/actions?workflow=CI)
+[![Test](https://github.com/jo-hoe/todoapi/workflows/test/badge.svg)](https://github.com/jo-hoe/todoapi/actions/workflows/test.yml)
+[![Lint](https://github.com/jo-hoe/todoapi/workflows/lint/badge.svg)](https://github.com/jo-hoe/todoapi/actions/workflows/lint.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jo-hoe/todoapi)](https://goreportcard.com/report/github.com/jo-hoe/todoapi)
 [![codecov](https://codecov.io/gh/jo-hoe/todoapi/branch/main/graph/badge.svg)](https://codecov.io/gh/jo-hoe/todoapi)
 

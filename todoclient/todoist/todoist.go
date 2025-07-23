@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -13,13 +14,11 @@ import (
 	"github.com/jo-hoe/todoapi/internal/common"
 	customhttp "github.com/jo-hoe/todoapi/internal/http"
 	"github.com/jo-hoe/todoapi/pkg/errors"
-	"github.com/jo-hoe/todoapi/pkg/logger"
 	"github.com/jo-hoe/todoapi/todoclient"
 )
 
 type TodoistClient struct {
 	httpClient *http.Client
-	logger     *logger.Logger
 }
 
 type TodoistTask struct {
@@ -63,7 +62,6 @@ func NewTodoistHTTPClient(token string) *http.Client {
 func NewTodoistClient(httpClient *http.Client) *TodoistClient {
 	return &TodoistClient{
 		httpClient: httpClient,
-		logger:     logger.New(),
 	}
 }
 
@@ -240,7 +238,7 @@ func (client *TodoistClient) GetAllParents(ctx context.Context) ([]todoclient.To
 	var projects []TodoistProject
 
 	if err := client.getData(ctx, todoistParentsUrl, &projects); err != nil {
-		client.logger.WithError(err).Error("failed to get all parents")
+		log.Printf("failed to get all parents: %v", err)
 		return result, errors.NewAPIError("TODOIST_GET_PARENTS_FAILED", "failed to retrieve parents", err)
 	}
 
@@ -272,7 +270,7 @@ func (client *TodoistClient) getTasks(ctx context.Context, parentID *string) ([]
 	}
 
 	if err := client.getData(ctx, url, &todoistTasks); err != nil {
-		client.logger.WithError(err).Error("failed to get tasks")
+		log.Printf("failed to get tasks: %v", err)
 		return nil, errors.NewAPIError("TODOIST_GET_TASKS_FAILED", "failed to retrieve tasks", err)
 	}
 
@@ -332,7 +330,7 @@ func (client *TodoistClient) convertToToDoTask(ctx context.Context, task Todoist
 		comments, err := client.getComments(ctx, task.ID)
 		if err != nil {
 			// Log error but don't fail the conversion
-			client.logger.WithError(err).WithField("taskId", task.ID).Warn("failed to get comments for task")
+			log.Printf("failed to get comments for task %s: %v", task.ID, err)
 			return &result, nil
 		}
 		for _, comment := range comments {

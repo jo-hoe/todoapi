@@ -13,7 +13,6 @@ type Config struct {
 	Server    ServerConfig
 	Todoist   TodoistConfig
 	Microsoft MicrosoftConfig
-	Logging   LoggingConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -38,12 +37,6 @@ type MicrosoftConfig struct {
 	BaseURL      string `json:"base_url"`
 }
 
-// LoggingConfig holds logging configuration
-type LoggingConfig struct {
-	Level  string `json:"level"`
-	Format string `json:"format"` // json or text
-}
-
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
 	config := &Config{
@@ -63,10 +56,6 @@ func Load() (*Config, error) {
 			TenantID:     getEnv("MS_TENANT_ID", ""),
 			BaseURL:      getEnv("MS_BASE_URL", "https://graph.microsoft.com/v1.0/me/todo/"),
 		},
-		Logging: LoggingConfig{
-			Level:  getEnv("LOG_LEVEL", "info"),
-			Format: getEnv("LOG_FORMAT", "text"),
-		},
 	}
 
 	if err := config.Validate(); err != nil {
@@ -80,14 +69,6 @@ func Load() (*Config, error) {
 func (c *Config) Validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
 		return fmt.Errorf("invalid server port: %d", c.Server.Port)
-	}
-
-	if c.Logging.Level == "" {
-		return fmt.Errorf("log level cannot be empty")
-	}
-
-	if c.Logging.Format != "json" && c.Logging.Format != "text" {
-		return fmt.Errorf("log format must be 'json' or 'text', got: %s", c.Logging.Format)
 	}
 
 	return nil

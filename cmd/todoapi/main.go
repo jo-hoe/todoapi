@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/jo-hoe/todoapi/config"
-	"github.com/jo-hoe/todoapi/pkg/logger"
 )
 
 var (
@@ -29,17 +28,12 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize logger
-	logger := logger.New()
-	logger.Info("Starting todoapi",
-		"version", Version,
-		"build_time", BuildTime,
-		"port", cfg.Server.Port)
+	log.Printf("Starting todoapi version=%s build_time=%s port=%d", Version, BuildTime, cfg.Server.Port)
 
 	// Create HTTP server
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      createHandler(cfg, logger),
+		Handler:      createHandler(cfg),
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
@@ -47,9 +41,9 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		logger.Info("Server starting", "addr", server.Addr)
+		log.Printf("Server starting on %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("Server failed to start", "error", err)
+			log.Printf("Server failed to start: %v", err)
 			os.Exit(1)
 		}
 	}()
@@ -59,21 +53,21 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Server shutting down...")
+	log.Println("Server shutting down...")
 
 	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", "error", err)
+		log.Printf("Server forced to shutdown: %v", err)
 		os.Exit(1)
 	}
 
-	logger.Info("Server exited")
+	log.Println("Server exited")
 }
 
-func createHandler(cfg *config.Config, logger *logger.Logger) http.Handler {
+func createHandler(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	// Health check endpoint
