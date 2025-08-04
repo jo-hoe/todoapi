@@ -14,13 +14,6 @@ import (
 	"github.com/jo-hoe/todoapi/config"
 )
 
-var (
-	// Version is set during build
-	Version = "dev"
-	// BuildTime is set during build
-	BuildTime = "unknown"
-)
-
 func main() {
 	// Load configuration
 	cfg, err := config.Load()
@@ -28,7 +21,7 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	log.Printf("Starting todoapi version=%s build_time=%s port=%d", Version, BuildTime, cfg.Server.Port)
+	log.Printf("Starting todoapi on port=%d", cfg.Server.Port)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -74,14 +67,14 @@ func createHandler(cfg *config.Config) http.Handler {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintf(w, `{"status":"ok","version":"%s","build_time":"%s"}`, Version, BuildTime)
+		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
 	})
 
 	// Root endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintf(w, `{"message":"TodoAPI","version":"%s"}`, Version)
+		_, _ = fmt.Fprint(w, `{"message":"TodoAPI"}`)
 	})
 
 	return mux

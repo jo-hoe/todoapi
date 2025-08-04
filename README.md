@@ -25,22 +25,26 @@ A unified API for todo applications with support for multiple providers includin
 The application uses environment variables for configuration:
 
 #### Server Configuration
+
 - `PORT`: Server port (default: 8080)
 - `READ_TIMEOUT`: HTTP read timeout (default: 30s)
 - `WRITE_TIMEOUT`: HTTP write timeout (default: 30s)
 - `IDLE_TIMEOUT`: HTTP idle timeout (default: 60s)
 
 #### Todoist Configuration
+
 - `TODOIST_API_TOKEN`: Your Todoist API token
-- `TODOIST_BASE_URL`: Todoist API base URL (default: https://api.todoist.com/rest/v2/)
+- `TODOIST_BASE_URL`: Todoist API base URL (default: <https://api.todoist.com/rest/v2/>)
 
 #### Microsoft To Do Configuration
+
 - `MS_CLIENT_ID`: Microsoft application client ID
 - `MS_CLIENT_SECRET`: Microsoft application client secret
 - `MS_TENANT_ID`: Microsoft tenant ID
-- `MS_BASE_URL`: Microsoft Graph API base URL (default: https://graph.microsoft.com/v1.0/me/todo/)
+- `MS_BASE_URL`: Microsoft Graph API base URL (default: <https://graph.microsoft.com/v1.0/me/todo/>)
 
 #### Logging Configuration
+
 - `LOG_LEVEL`: Logging level (default: info)
 - `LOG_FORMAT`: Log format - json or text (default: text)
 - `ENV`: Environment - production for JSON logging (default: development)
@@ -146,7 +150,6 @@ func main() {
 }
 ```
 
-
 ### API Credentials Setup
 
 #### Todoist
@@ -162,6 +165,7 @@ func main() {
 2. Configure the required permissions for Microsoft Graph API
 3. Obtain client credentials and implement OAuth2 flow
 4. Set the environment variables:
+
    ```bash
    export MS_CLIENT_ID=your_client_id
    export MS_CLIENT_SECRET=your_client_secret
