@@ -161,16 +161,7 @@ func main() {
 
 #### Microsoft To Do
 
-1. Register an application in the [Azure Portal](https://portal.azure.com/)
-2. Configure the required permissions for Microsoft Graph API
-3. Obtain client credentials and implement OAuth2 flow
-4. Set the environment variables:
-
-   ```bash
-   export MS_CLIENT_ID=your_client_id
-   export MS_CLIENT_SECRET=your_client_secret
-   export MS_TENANT_ID=your_tenant_id
-   ```
+See the [documentation](cmd/credential_generation/README.md) for detailed steps on how to create OAuth credentials for Microsoft To Do.
 
 ## License
 
