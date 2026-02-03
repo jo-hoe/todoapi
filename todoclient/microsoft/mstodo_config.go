@@ -12,6 +12,7 @@ import (
 type MSClientConfig struct {
 	ClientCredentials MSClientCredentials
 	Token             MsOAuthToken
+	Scopes           []string
 }
 
 type MSClientCredentials struct {
@@ -32,8 +33,9 @@ func NewClient(config MSClientConfig, saveToken func(token *oauth2.Token)) *http
 	var oauthConfig = oauth2.Config{
 		ClientID:     config.ClientCredentials.ClientId,
 		ClientSecret: config.ClientCredentials.ClientSecret,
-		Scopes:       []string{"openid offline_access tasks.readwrite"},
-		RedirectURL:  "https://localhost/login/authorized",
+		// Use provided scopes if any; normalization and defaulting will be handled by the AzureV2TokenSource
+		Scopes:      config.Scopes,
+		RedirectURL: "https://localhost/login/authorized",
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
 			TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
@@ -44,21 +46,16 @@ func NewClient(config MSClientConfig, saveToken func(token *oauth2.Token)) *http
 		AccessToken:  config.Token.AccessToken,
 		TokenType:    config.Token.TokenType,
 		RefreshToken: config.Token.RefreshToken,
-		Expiry:       time.Now(),
+		// Force immediate refresh on startup to ensure we persist a fresh token and correct scopes
+		Expiry: time.Now().Add(-1 * time.Hour),
 	}
 	ctx := context.Background()
-	tokenSource := oauthConfig.TokenSource(ctx, &token)
-	newToken, err := tokenSource.Token()
-	if err != nil {
+
+	// Use custom Azure AD v2 TokenSource to ensure scope is included on refresh and tokens are persisted
+	ts := NewAzureV2TokenSource(ctx, &oauthConfig, &token, saveToken)
+	if _, err := ts.Token(); err != nil {
 		log.Fatalln(err)
 	}
 
-	// access-token is valid for 1 hour (by default)
-	// and the issued refresh token is valid for 90 days
-	// ms sends a new refresh token for each call back which again is 90 days valid
-	if saveToken != nil {
-		saveToken(newToken)
-	}
-
-	return oauth2.NewClient(ctx, tokenSource)
+	return oauth2.NewClient(ctx, ts)
 }

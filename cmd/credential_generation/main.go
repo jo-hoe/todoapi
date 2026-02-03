@@ -16,7 +16,7 @@ var (
 	clientID     = os.Getenv("CLIENT_ID")
 	clientSecret = os.Getenv("CLIENT_SECRET")
 	tenantID     = os.Getenv("TENANT_ID")
-	scope        = "offline_access Tasks.ReadWrite"
+	scope        = "offline_access openid Tasks.ReadWrite"
 	redirectURI  = getenvDefault("REDIRECT_URI", "http://localhost:7861")
 	serverPort   = getenvDefault("PORT", "7861")
 )
@@ -29,8 +29,12 @@ func getenvDefault(key, def string) string {
 }
 
 func main() {
-	if clientID == "" || clientSecret == "" || tenantID == "" {
-		log.Fatal("Set CLIENT_ID, CLIENT_SECRET, and TENANT_ID environment variables")
+	// Default tenant to 'common' if not provided
+	if tenantID == "" {
+		tenantID = "common"
+	}
+	if clientID == "" || clientSecret == "" {
+		log.Fatal("Set CLIENT_ID and CLIENT_SECRET environment variables")
 	}
 
 	codeCh := make(chan string)
