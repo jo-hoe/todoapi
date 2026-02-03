@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,9 +17,16 @@ var (
 	clientSecret = os.Getenv("CLIENT_SECRET")
 	tenantID     = os.Getenv("TENANT_ID")
 	scope        = "offline_access Tasks.ReadWrite"
-	redirectURI  = "http://localhost:7861"
-	serverPort   = "7861"
+	redirectURI  = getenvDefault("REDIRECT_URI", "http://localhost:7861")
+	serverPort   = getenvDefault("PORT", "7861")
 )
+
+func getenvDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
 
 func main() {
 	if clientID == "" || clientSecret == "" || tenantID == "" {
@@ -139,9 +147,36 @@ func getToken(code string) (*TokenResponse, error) {
 			log.Printf("closing response body failed: %v", cerr)
 		}
 	}()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading token response failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var terr struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+		if err := json.Unmarshal(body, &terr); err == nil && (terr.Error != "" || terr.ErrorDescription != "") {
+			return nil, fmt.Errorf("token endpoint %d: %s (%s)", resp.StatusCode, terr.ErrorDescription, terr.Error)
+		}
+		return nil, fmt.Errorf("token endpoint %d: %s", resp.StatusCode, string(body))
+	}
+
 	var token TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-		return nil, err
+	if err := json.Unmarshal(body, &token); err != nil {
+		return nil, fmt.Errorf("decoding token response failed: %w", err)
+	}
+	if token.AccessToken == "" {
+		var terr struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+		if err := json.Unmarshal(body, &terr); err == nil && (terr.Error != "" || terr.ErrorDescription != "") {
+			return nil, fmt.Errorf("token response missing access_token: %s (%s)", terr.ErrorDescription, terr.Error)
+		}
+		return nil, fmt.Errorf("token response missing access_token; raw: %s", string(body))
 	}
 	return &token, nil
 }
