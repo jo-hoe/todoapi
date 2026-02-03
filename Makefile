@@ -19,3 +19,9 @@ lint: ## Run linters using golangci-lint
 test: ## Run tests via golang
 	@echo "Running tests..."
 	@go test -v -cover $(ROOT_DIR)...
+
+.PHONY: update
+update: ## Update dependencies
+	@git pull
+	@go get -u ./...
+	@go mod tidy
