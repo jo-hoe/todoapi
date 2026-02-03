@@ -29,16 +29,28 @@ func main() {
 
 	// Start HTTP server to receive the auth code
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			log.Printf("ParseForm failed: %v", err)
+			return
+		}
 		code := r.FormValue("code")
 		if code != "" {
-			fmt.Fprintf(w, "Authorization code received. You can close this window.")
+			if _, err := fmt.Fprintf(w, "Authorization code received. You can close this window."); err != nil {
+				log.Printf("write response failed: %v", err)
+			}
 			codeCh <- code
 		} else {
-			fmt.Fprintf(w, "Waiting for authorization code...")
+			if _, err := fmt.Fprintf(w, "Waiting for authorization code..."); err != nil {
+				log.Printf("write response failed: %v", err)
+			}
 		}
 	})
-	go http.ListenAndServe(":"+serverPort, nil)
+	go func() {
+		if err := http.ListenAndServe(":"+serverPort, nil); err != nil && err != http.ErrServerClosed {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
 
 	// Build authorization URL
 	authURL := fmt.Sprintf(
@@ -80,7 +92,9 @@ func main() {
 		} else {
 			fmt.Println("OAuth credentials written to oauth_credentials.json")
 		}
-		file.Close()
+		if cerr := file.Close(); cerr != nil {
+			log.Printf("Failed to close credentials file: %v", cerr)
+		}
 	}
 }
 
@@ -95,7 +109,9 @@ func openBrowser(url string) {
 		cmd = "xdg-open"
 		args = []string{url}
 	}
-	exec.Command(cmd, args...).Start()
+	if err := exec.Command(cmd, args...).Start(); err != nil {
+		log.Printf("Failed to open browser: %v", err)
+	}
 }
 
 type TokenResponse struct {
@@ -118,7 +134,11 @@ func getToken(code string) (*TokenResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			log.Printf("closing response body failed: %v", cerr)
+		}
+	}()
 	var token TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return nil, err
