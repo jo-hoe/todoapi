@@ -4,7 +4,7 @@
 
 - register an app in azure [https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps]
 - create a Web App with "Accounts in any organizational directory (Any Azure AD directory  - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)"
-- add redirect url "http://localhost"
+- add redirect url "<http://localhost>"
 - create a secret
   - go to `Manage`
   - select `Certificates & secrets`
